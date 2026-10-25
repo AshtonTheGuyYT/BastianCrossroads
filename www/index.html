@@ -277,7 +277,7 @@ textarea.inp{height:auto;min-height:88px;padding:10px 12px;resize:vertical;line-
 .color-inp{width:42px;height:42px;border:1px solid var(--line);border-radius:var(--r-md);padding:3px;background:var(--bg);cursor:pointer}
 
 /* ---------- floating: popover / sheet / emoji ---------- */
-.pop{position:fixed;z-index:50;width:320px;max-width:calc(100vw - 20px);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden;animation:popIn .16s ease-out}
+.pop{position:fixed;z-index:50;width:320px;max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden;animation:popIn .16s ease-out}
 @keyframes popIn{from{opacity:0;transform:translateY(6px) scale(.98)}}
 .sheet-scrim{position:fixed;inset:0;z-index:49;background:rgba(0,0,0,.5);animation:fade .2s}
 @keyframes fade{from{opacity:0}}
@@ -301,8 +301,9 @@ textarea.inp{height:auto;min-height:88px;padding:10px 12px;resize:vertical;line-
 .pcard-sec p{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
 .pcard-actions{display:flex;gap:8px;margin-top:16px}
 .pcard-actions .btn{flex:1}
-.status-menu{display:grid;gap:2px;margin-top:8px}
-.status-opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:14px}
+.status-menu{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.status-opt{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;font-size:13.5px;white-space:nowrap;min-width:0}
+.status-opt .chk{display:none}
 .status-opt:hover{background:var(--raised)}
 .status-opt.sel{background:var(--raised);font-weight:600}
 .status-opt .dot{position:static;width:12px;height:12px;border:0;border-radius:50%}
@@ -459,6 +460,13 @@ body.phone .themes{grid-template-columns:repeat(2,minmax(0,1fr))}
 body.phone .set-nav .set-close-inline{display:grid}
 body.phone #toasts{bottom:calc(84px + var(--safe-b))}
 
+@media (max-height:720px){
+  .pcard-banner{height:78px}
+  .pcard-top{margin-top:-38px}.pcard-top .av{--s:72px!important}
+  .pcard-body{padding:8px 16px 14px}.pcard-name{font-size:21px}
+  .pcard-sec{margin-top:10px;padding-top:9px}.pcard-status{margin-top:8px;padding:6px 10px}
+  .pcard-actions{margin-top:12px}.status-opt{padding:6px 9px}
+}
 @media (max-width:900px){:root{--sidebar-w:280px}.prof-grid{grid-template-columns:1fr}.prof-preview{position:static;order:-1}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
@@ -1424,7 +1432,10 @@ const Float = {
 function place(el, anchor, side) {
   const r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight, vw = innerWidth, vh = innerHeight, m = 10;
   let left, top;
-  if (side === 'above') {
+  if (side === 'up') {
+    left = r.left; top = r.top - h - 8;
+    if (top < m) top = m;
+  } else if (side === 'above') {
     left = r.right - w; top = r.top - h - 8;
     if (top < m) top = r.bottom + 8;
     if (top + h > vh - m) top = Math.max(m, vh - h - m);
@@ -1529,7 +1540,7 @@ function profileCardHTML(u, { preview = false } = {}) {
       ${actions}
     </div>`;
 }
-function showProfile(id, anchor) {
+function showProfile(id, anchor, side) {
   const u = getUser(id); if (!u) return;
   const el = document.createElement('div'); el.className = 'pop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', `${u.displayName}'s profile`);
   el.innerHTML = profileCardHTML(u);
@@ -1556,7 +1567,7 @@ function showProfile(id, anchor) {
       }
     }
   });
-  Float.open(el, anchor);
+  Float.open(el, anchor, { side: side || 'right' });
 }
 
 /* =========================================================
@@ -1977,7 +1988,7 @@ function wire() {
   $('#addBtn').onclick = () => openAddModal();
   $('#emptyAdd').onclick = () => openAddModal();
   $('#gearBtn').onclick = () => openSettings('profile');
-  $('#meBtn').onclick = e => showProfile(S.me.id, e.currentTarget);
+  $('#meBtn').onclick = e => showProfile(S.me.id, e.currentTarget, 'up');
   $('#backBtn').onclick = () => closeChat();
   $('#headWho').onclick = e => showProfile(S.active, e.currentTarget);
   $('#headProfile').onclick = e => showProfile(S.active, e.currentTarget);
