@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Status · Bastion Crossroads</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/status.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <svg class="crest" viewBox="0 0 64 72" aria-hidden="true"><path fill="currentColor" d="M6 4h10v6h7V4h7v6h4V4h7v6h7V4h10v32c0 16-11.5 27-26 32C17.5 63 6 52 6 36z"/><path fill="#151A22" d="M28 14h8v50.5l-4 1.7-4-1.7zM11 30h42v8H11z"/><circle cx="32" cy="34" r="6.5" fill="currentColor"/><circle cx="32" cy="34" r="2.5" fill="#151A22"/></svg>
+    <div>
+      <h1>Bastion Crossroads</h1>
+      <p class="sub">Server status</p>
+    </div>
+  </header>
+
+  <section class="banner" id="banner" data-state="loading">
+    <span class="beacon" aria-hidden="true"></span>
+    <div>
+      <h2 id="headline">Checking the server…</h2>
+      <p id="detail">One moment.</p>
+    </div>
+  </section>
+
+  <section class="grid" aria-label="Server numbers">
+    <div class="stat"><span class="k">Up for</span><span class="v" id="uptime">–</span></div>
+    <div class="stat"><span class="k">Online right now</span><span class="v" id="online">–</span></div>
+    <div class="stat"><span class="k">People with accounts</span><span class="v" id="people">–</span></div>
+    <div class="stat"><span class="k">Messages stored</span><span class="v" id="messages">–</span></div>
+  </section>
+
+  <section class="card">
+    <h3>File storage</h3>
+    <div class="bar" role="progressbar" aria-labelledby="storageText" id="bar"><i id="barFill"></i></div>
+    <p class="muted" id="storageText">–</p>
+  </section>
+
+  <section class="card">
+    <h3>Setup</h3>
+    <dl id="setup"></dl>
+  </section>
+
+  <p class="foot"><a href="/">Open Bastion Crossroads</a><span id="checked"></span></p>
+</main>
+<script src="/status.js"></script>
+</body>
+</html>

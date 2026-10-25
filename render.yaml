@@ -1,0 +1,34 @@
+# Render Blueprint for Bastion Crossroads (free plan).
+# In Render: New > Blueprint > pick this repo. It asks you for the secret values below.
+services:
+  - type: web
+    name: bastion-crossroads
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/server.js
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: TOKEN_SECRET
+        generateValue: true          # Render makes a long random secret for you
+      - key: DATABASE_URL            # from Neon (free Postgres)
+        sync: false
+      - key: S3_ENDPOINT             # from Backblaze B2, e.g. https://s3.us-east-005.backblazeb2.com
+        sync: false
+      - key: S3_REGION               # e.g. us-east-005
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID        # B2 "keyID"
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY    # B2 "applicationKey"
+        sync: false
+      - key: REGISTRATION_CODE       # optional: leave blank for open sign-ups
+        sync: false
+      - key: ALLOWED_ORIGINS         # optional: other websites allowed to use this server
+        sync: false
