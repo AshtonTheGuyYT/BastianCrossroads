@@ -7,6 +7,7 @@ This puts the server on the internet so phones and PCs anywhere can use it. It t
 | **Render** | Runs the server, hosts the website and the status page | 750 hours a month (enough for one server all month) |
 | **Neon** | Keeps accounts and messages (PostgreSQL database) | 1 GB of data |
 | **Backblaze B2** | Keeps uploaded files | 10 GB stored |
+| **Metered** (optional) | Relays voice and video calls on networks that block direct connections | 20 GB of relayed calls a month |
 
 Why three? Render's free server **erases its own disk** whenever it restarts or falls asleep. If accounts, messages and files lived there, they would vanish. Neon and Backblaze keep them safe permanently.
 
@@ -55,6 +56,16 @@ The server creates its own tables the first time it starts. You don't need to ru
 
 The server sets the bucket's upload rules (CORS) by itself when it starts. If the Render log says it could not, open the bucket's **CORS Rules**, choose to share with **specific origins**, enter your Render address, and apply it to the **S3 Compatible API**.
 
+## Step 3½: Call relay (Metered) — optional but recommended
+
+Calls go straight between the two devices when possible. Some networks (mobile data, school or work Wi-Fi) block that, and the call then needs a relay. Without one, those calls fail to connect.
+
+1. Sign up for the free plan at **metered.ca** (their "Open Relay" TURN service).
+2. When asked, create an app. Its address looks like `yourapp.metered.live`. That's your `METERED_DOMAIN`.
+3. In the TURN server section of the dashboard, find your **API key**. That's your `METERED_API_KEY`.
+
+The key stays on the server; the app only ever receives short-term relay passes.
+
 ## Step 4: Start the server (Render)
 
 1. Sign up at **render.com** (signing in with GitHub is easiest).
@@ -71,6 +82,8 @@ The server sets the bucket's upload rules (CORS) by itself when it starts. If th
    | `S3_SECRET_ACCESS_KEY` | B2 applicationKey |
    | `REGISTRATION_CODE` | optional, see "Make it private" below. Leave empty for open sign-ups. |
    | `ALLOWED_ORIGINS` | leave empty unless you host the website somewhere else |
+   | `METERED_DOMAIN` | e.g. `yourapp.metered.live` (optional, for calls) |
+   | `METERED_API_KEY` | your Metered API key (optional, for calls) |
 
    `TOKEN_SECRET` is generated for you.
 4. Click **Apply**. The first build takes a few minutes.
@@ -95,10 +108,22 @@ const DEFAULT_SERVER = 'https://YOUR-NAME.onrender.com';
 Save, and upload the changed file to GitHub (Render redeploys automatically).
 
 - **Phones (Android/iOS app):** build with Capacitor as in the README (`npm run cap:android`). The app opens straight to your server's sign-in.
+  For calls, the app needs camera and microphone permission:
+  - **Android:** in `android/app/src/main/AndroidManifest.xml`, inside `<manifest>`, add
+    `<uses-permission android:name="android.permission.CAMERA" />`, `<uses-permission android:name="android.permission.RECORD_AUDIO" />` and `<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />`.
+  - **iOS:** in `ios/App/App/Info.plist`, add `NSCameraUsageDescription` and `NSMicrophoneUsageDescription` with a sentence like "Used for video and voice calls."
+  Calls ring only while the app is open. Ringing a locked phone needs push notifications, which this version doesn't have.
 - **PC:** open your Render address in Chrome or Edge and click **Install** in the address bar. It becomes a desktop app with its own window and icon.
 - **Phones without the app store:** open your Render address and use **Add to Home Screen** (iPhone) or **Install app** (Android).
 
 ---
+
+## Updating an existing server
+
+1. Download the new project and unzip it.
+2. On GitHub, open your repository, click **Add file → Upload files**, and drag in **everything** from the new folder (the `server` and `www` folders and the files next to them). GitHub replaces files with the same name. Click **Commit changes**.
+3. Render redeploys on its own. New settings (like the Metered ones) go in Render → your service → **Environment**.
+4. Check `/status`. Your accounts, messages and files carry over; the database upgrades itself.
 
 ## Make it private (recommended at first)
 
@@ -134,6 +159,12 @@ What's protecting the server, and what each item stops:
 - Blocking: a blocked person can't message you, find you in search, or see you typing.
 - Every message, name, bio and status is length-limited and cleaned of invisible text-direction tricks used for spoofing (like `photo‮gnp.exe`).
 - The app shows everything as plain text, and the page carries a strict script policy (CSP) locked to the app's own code by its exact fingerprint, so even if a trick slipped through, injected scripts would not run.
+
+**Requests and calls**
+- People you haven't accepted land in Requests, can send at most 5 messages, can't see you online, and can't see you typing.
+- Calls only work between two people who have both accepted each other; anyone else is refused by the server. Starting calls is rate-limited.
+- The server only passes call setup messages between the two people in that call. The call itself is encrypted end to end between the devices (WebRTC's built-in DTLS-SRTP), including when it goes through the relay.
+- Your Metered API key never leaves the server.
 
 **Files**
 - The bucket is private. Files are reachable only through signed links that expire, handed out only to the two people in the conversation.
@@ -175,3 +206,6 @@ Good habits that matter more than any setting: keep the keys and connection stri
 | Images or files don't upload | Logs mention CORS → set the bucket CORS rule as described in Step 3. Or a B2 key typo. |
 | App says "This site is not allowed to use this server" | You're hosting the website somewhere other than Render. Add that site's address to `ALLOWED_ORIGINS`. |
 | Takes a minute to open | The free server was asleep. Normal; see "Sleeping" above. |
+| Calls ring but never connect | No relay set up, or a Metered setting is wrong. The status page shows "Calls: Relay connected" when it works. |
+| No call buttons | Calls appear only after **both** people have accepted each other, and only when connected to a server. |
+| "Allow microphone access" | The browser or phone blocked the mic/camera. Allow it in the site settings (lock icon) or phone settings, then try again. |

@@ -23,6 +23,7 @@ async function check() {
       ...row('Accounts and messages', s.database.kind === 'postgres' ? 'PostgreSQL database' : 'File on the server', s.database.permanent),
       ...row('Files', s.storage.kind === 's3' ? 'Cloud bucket' : 'Server disk', s.storage.permanent),
       ...row('New accounts', s.registration === 'open' ? 'Anyone can sign up' : 'Invite code required'),
+      ...row('Calls', s.calls?.relay ? 'Relay connected (works on every network)' : 'Direct only (add a relay, see DEPLOY.md)'),
       ...row('Hosted on', s.host), ...row('Version', s.version));
   } catch {
     b.dataset.state = 'down';

@@ -101,6 +101,42 @@ a{color:var(--accent)}
 .conn.off{background:var(--danger);animation:blink 1.2s infinite}
 @keyframes blink{50%{opacity:.3}}
 
+/* ---------- calls ---------- */
+.call-ui{position:fixed;inset:0;z-index:95;background:radial-gradient(120% 90% at 50% 20%,color-mix(in srgb,var(--accent) 22%,var(--panel)),var(--bg));display:flex;flex-direction:column;animation:fade .2s}
+.call-stage{flex:1;position:relative;min-height:0;display:grid;place-items:center;overflow:hidden}
+#callRemote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+.call-who{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:20px}
+.call-who .av{--s:112px!important;margin-bottom:6px}
+.call-ui[data-state=incoming] .call-who .av,.call-ui[data-state=outgoing] .call-who .av{animation:callPulse 1.6s ease-in-out infinite}
+@keyframes callPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent);border-radius:50%}50%{box-shadow:0 0 0 18px transparent;border-radius:50%}}
+.call-who b{font-family:var(--font-display);font-size:28px;font-weight:600}
+.call-who span{color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums}
+.call-ui.has-remote .call-who{position:absolute;top:calc(16px + var(--safe-t));left:16px;align-items:flex-start;padding:10px 14px;background:rgba(0,0,0,.4);border-radius:var(--r-md);backdrop-filter:blur(8px)}
+.call-ui.has-remote .call-who b{font-size:17px;color:#fff}.call-ui.has-remote .call-who span{color:#ddd;font-size:13px}
+#callLocal{position:absolute;right:16px;bottom:16px;width:min(26vw,220px);aspect-ratio:3/4;object-fit:cover;border-radius:var(--r-lg);border:2px solid rgba(255,255,255,.25);background:#000;z-index:2;transform:scaleX(-1);box-shadow:var(--shadow)}
+.call-ui:not(.has-remote) #callLocal{width:min(34vw,260px)}
+.call-controls{display:flex;justify-content:center;gap:14px;padding:18px 16px;padding-bottom:calc(22px + var(--safe-b));flex-wrap:wrap}
+.call-btn{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);min-width:64px}
+.call-btn .ic{width:58px;height:58px;padding:16px;border-radius:50%;background:var(--raised);border:1px solid var(--line);box-sizing:border-box;transition:transform .1s}
+.call-btn:active .ic{transform:scale(.93)}
+.call-btn.off .ic{background:var(--text);color:var(--bg)}
+.call-btn.end .ic{background:#E5484D;color:#fff;border-color:transparent}
+.call-btn.ok .ic{background:#2FB566;color:#fff;border-color:transparent}
+.call-log{display:flex;align-items:center;gap:10px;margin:10px 18px 4px 66px;padding:9px 12px;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-md);font-size:14px;width:fit-content;max-width:calc(100% - 84px)}
+.call-log .ic{color:#2FB566}.call-log.missed .ic{color:#E5484D}.call-log.missed b{color:#E5484D}
+.call-log time{color:var(--muted);font-size:12px;margin-left:4px}
+body.phone .call-log{margin-left:56px}
+/* ---------- requests ---------- */
+.list-tabs{display:flex;gap:4px;margin:0 14px 4px;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md)}
+.list-tabs button{flex:1;height:32px;border-radius:calc(var(--r-md) - 3px);font-size:13.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.list-tabs button.on{background:var(--raised);color:var(--text)}
+.list-tabs button:hover{color:var(--text)}
+.req-count{min-width:18px;height:18px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:inline-grid;place-items:center;padding:0 5px}
+.convo .req-tag{font-size:11px;font-weight:700;color:var(--accent);background:var(--soft);border-radius:999px;padding:1px 7px;flex:none}
+.request-bar{position:relative;z-index:3;margin:0 16px 16px;margin-bottom:calc(14px + var(--safe-b));padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:0 -6px 24px rgba(0,0,0,.18)}
+.request-bar h4{margin:0 0 4px;font-size:15px}
+.request-bar p{margin:0 0 14px;color:var(--muted);font-size:13.5px}
+.request-bar .row .btn{flex:1;min-width:100px}
 /* ---------- avatars ---------- */
 .av{position:relative;flex:none;width:var(--s,40px);height:var(--s,40px);display:block}
 .av-img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:grid;place-items:center;font-weight:700;font-size:calc(var(--s,40px) * .38);color:#fff;background:var(--c,#556);overflow:hidden;user-select:none;letter-spacing:-.02em}
@@ -276,6 +312,19 @@ textarea.inp{height:auto;min-height:88px;padding:10px 12px;resize:vertical;line-
 .toggle-row span{font-size:13px;color:var(--muted)}
 .color-inp{width:42px;height:42px;border:1px solid var(--line);border-radius:var(--r-md);padding:3px;background:var(--bg);cursor:pointer}
 
+/* ---------- custom emoji ---------- */
+.emj{width:1.3em;height:1.3em;vertical-align:-.3em;margin:0 .04em;display:inline-block;object-fit:contain;filter:drop-shadow(0 0 .7px rgba(255,255,255,.28))}
+body.light .emj{filter:none}
+.msg-text.jumbo .emj{width:48px;height:48px;vertical-align:-10px;margin:2px 1px}
+body.phone .msg-text.jumbo .emj{width:42px;height:42px}
+.react .emj{width:19px;height:19px;vertical-align:middle;margin:0}
+.tool .emj{width:20px;height:20px;margin:0}
+.ep-items .emj{width:30px;height:30px;margin:0}
+.ep-tabs .emj{width:20px;height:20px;margin:0}
+.ep-foot .big .emj{width:26px;height:26px;margin:0;vertical-align:middle}
+.ac-item .em .emj{width:24px;height:24px;margin:0}
+.msheet .quick .emj{width:28px;height:28px;margin:0}
+.ep-tabs button{filter:none;opacity:.65}
 /* ---------- floating: popover / sheet / emoji ---------- */
 .pop{position:fixed;z-index:50;width:320px;max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden;animation:popIn .16s ease-out}
 @keyframes popIn{from{opacity:0;transform:translateY(6px) scale(.98)}}
@@ -324,7 +373,7 @@ textarea.inp{height:auto;min-height:88px;padding:10px 12px;resize:vertical;line-
 .ep-grid{flex:1;overflow-y:auto;padding:0 8px 8px}
 .ep-cat{font-size:12px;font-weight:700;color:var(--muted);padding:9px 4px 4px;position:sticky;top:0;background:var(--panel);z-index:1}
 .ep-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr))}
-.ep-items button{font-size:24px;height:40px;border-radius:8px;display:grid;place-items:center;line-height:1}
+.ep-items button{height:42px;border-radius:8px;display:grid;place-items:center;line-height:1}
 .ep-items button:hover,.ep-items button:focus-visible{background:var(--raised)}
 .ep-tabs{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:4px 6px}
 .ep-tabs button{font-size:18px;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;filter:grayscale(.7);opacity:.75}
@@ -369,7 +418,7 @@ textarea.inp{height:auto;min-height:88px;padding:10px 12px;resize:vertical;line-
 .tc-side{width:34%;padding:8px 6px;display:flex;flex-direction:column;gap:6px}
 .tc-side i{height:8px;border-radius:4px;display:block;opacity:.75}
 .tc-main{flex:1;position:relative;padding:10px 8px;display:flex;flex-direction:column;gap:6px;justify-content:flex-end}
-.tc-main .pat{position:absolute;inset:0;background-size:60px}
+.tc-main .pat{position:absolute;inset:0;background-size:78px}
 .tc-main i{position:relative;height:9px;border-radius:5px;display:block}
 .tc-label{padding:8px 10px;font-weight:600;font-size:13.5px;display:flex;justify-content:space-between;align-items:center;background:var(--panel);color:var(--text)}
 .tc-label small{color:var(--muted);font-weight:500}
@@ -495,6 +544,10 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
       <label class="search"><span id="icSearch"></span><span class="sr">Search people</span><input id="search" type="search" placeholder="Search people" autocomplete="off" spellcheck="false"></label>
       <button class="icon-btn solid" id="addBtn" title="Add a person" aria-label="Add a person"></button>
     </div>
+    <div class="list-tabs" role="tablist" aria-label="Conversations">
+      <button role="tab" data-tab-list="messages" class="on">Messages</button>
+      <button role="tab" data-tab-list="requests">Requests <span class="req-count" id="reqCount" hidden></span></button>
+    </div>
     <nav id="convoList"></nav>
     <div id="meBar">
       <button class="me-btn" id="meBtn" aria-label="Your profile"></button>
@@ -518,10 +571,13 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
       <header class="chat-head">
         <button class="icon-btn back-btn" id="backBtn" aria-label="Back to conversations"></button>
         <button class="head-who" id="headWho"></button>
+        <button class="icon-btn" id="callVoice" title="Voice call" aria-label="Start a voice call" hidden></button>
+        <button class="icon-btn" id="callVideo" title="Video call" aria-label="Start a video call" hidden></button>
         <button class="icon-btn" id="headProfile" title="View profile" aria-label="View profile"></button>
       </header>
       <div id="messages" role="log" aria-live="polite" tabindex="-1"></div>
       <div id="typing" aria-live="polite"></div>
+      <div class="request-bar" id="requestBar" hidden></div>
       <div class="composer" id="composer">
         <div class="ac" id="ac" hidden role="listbox"></div>
         <div class="composer-box">
@@ -542,8 +598,10 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
 </div>
 
 <div id="onboard" hidden></div>
+<div id="callUI" class="call-ui" hidden role="dialog" aria-label="Call"></div>
 <div id="toasts" aria-live="assertive"></div>
 
+<script src="emoji-art.js"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -559,7 +617,7 @@ const APP_VERSION = '2.0.0';
    --------------------------------------------------------- */
 const DEFAULT_SERVER = '';
 const MAX_FILE = 1024 * 1024 * 1024; // 1 GB per file, any type
-const QUICK = ['👍','❤️','😂','🔥','😮','😢'];
+const QUICK = ['👍', '❤️', '😂', '🥹', '🔥', '😮'];
 const USERNAME_RE = /^[a-z0-9_.]{2,24}$/;
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -601,32 +659,59 @@ const ICONS = {
   userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
   msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
-  card: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15h4M7 11h10"/>'
+  card: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15h4M7 11h10"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  phoneOff: '<path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 6.2 2 2 0 0 1 5.1 4h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L9.1 11.8"/><path d="M22 2 2 22"/>',
+  video: '<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  videoOff: '<path d="M10.7 6H14a2 2 0 0 1 2 2v3.3l1 1L22 8v8M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m2 2 20 20"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/>',
+  micOff: '<path d="M9 9v2a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6M17 16.9A7 7 0 0 1 5 11v-1M19 10v1a7 7 0 0 1-.1 1.2M12 18v4M8 22h8"/><path d="m2 2 20 20"/>',
+  flip: '<path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5-2.2l1 .9M15 14a3 3 0 0 1-5 2.2l-1-.9M15 9v3h-3M9 18v-3h3"/>'
 };
 const ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 
 /* ---------- emoji data ---------- */
-const EMOJI_RAW = {
-  Smileys: '😀 grinning,😃 smiley,😄 smile,😁 grin,😆 laughing,😅 sweat_smile,🤣 rofl,😂 joy,🙂 slight_smile,🙃 upside_down,😉 wink,😊 blush,😇 innocent,🥰 smiling_hearts,😍 heart_eyes,🤩 star_struck,😘 kiss,😋 yum,😛 tongue,😜 winking_tongue,🤪 zany,😝 squint_tongue,🤑 money_mouth,🤗 hug,🤭 hand_over_mouth,🤫 shush,🤔 thinking,🤐 zipper_mouth,🤨 raised_eyebrow,😐 neutral,😑 expressionless,😶 no_mouth,😏 smirk,😒 unamused,🙄 eye_roll,😬 grimace,😌 relieved,😔 pensive,😪 sleepy,🤤 drool,😴 sleeping,😷 mask,🤒 sick,🤕 bandage,🤢 nauseated,🤮 vomit,🥵 hot,🥶 cold,🥴 woozy,😵 dizzy_face,🤯 mind_blown,🤠 cowboy,🥳 party,😎 sunglasses,🤓 nerd,🧐 monocle,😕 confused,😟 worried,🙁 frown,😮 open_mouth,😯 hushed,😲 astonished,😳 flushed,🥺 pleading,😦 frowning,😧 anguished,😨 fearful,😰 anxious,😥 sad_relieved,😢 cry,😭 sob,😱 scream,😖 confounded,😣 persevere,😞 disappointed,😓 sweat,😩 weary,😫 tired,🥱 yawn,😤 triumph,😡 rage,😠 angry,🤬 cursing,😈 smiling_imp,👿 imp,💀 skull,☠️ skull_crossbones,💩 poop,🤡 clown,👹 ogre,👺 goblin,👻 ghost,👽 alien,👾 space_invader,🤖 robot,😺 cat_smile,😹 cat_joy,😻 cat_heart_eyes,🙀 cat_scream',
-  Gestures: '👋 wave,🤚 raised_back,✋ raised_hand,🖖 vulcan,👌 ok_hand,🤌 pinched,✌️ peace,🤞 crossed_fingers,🤟 love_you,🤘 metal,🤙 call_me,👈 point_left,👉 point_right,👆 point_up,👇 point_down,👍 thumbsup,👎 thumbsdown,✊ fist,👊 punch,👏 clap,🙌 raised_hands,👐 open_hands,🤲 palms_up,🤝 handshake,🙏 pray,✍️ writing,💪 muscle,🧠 brain,👀 eyes,👅 tongue_out,👄 lips,🫶 heart_hands,🫡 salute,🤷 shrug,🙋 raising_hand,🙇 bow,🤦 facepalm,💃 dancer,🕺 dancing,👑 crown,🧙 mage,🧛 vampire,🧟 zombie,🥷 ninja,🦸 superhero',
-  Hearts: '❤️ heart,🧡 orange_heart,💛 yellow_heart,💚 green_heart,💙 blue_heart,💜 purple_heart,🖤 black_heart,🤍 white_heart,🤎 brown_heart,💔 broken_heart,❣️ heart_exclamation,💕 two_hearts,💞 revolving_hearts,💓 heartbeat,💗 growing_heart,💖 sparkling_heart,💘 cupid,💝 gift_heart,💟 heart_decoration,❤️‍🔥 heart_on_fire,💋 kiss_mark,💌 love_letter',
-  Nature: '🐶 dog,🐱 cat,🐭 mouse,🐹 hamster,🐰 rabbit,🦊 fox,🐻 bear,🐼 panda,🐨 koala,🐯 tiger,🦁 lion,🐮 cow,🐷 pig,🐸 frog,🐵 monkey,🐔 chicken,🐧 penguin,🐦 bird,🦆 duck,🦅 eagle,🦉 owl,🦇 bat,🐺 wolf,🐴 horse,🦄 unicorn,🐝 bee,🦋 butterfly,🐌 snail,🐞 ladybug,🐢 turtle,🐍 snake,🦎 lizard,🐙 octopus,🦑 squid,🦀 crab,🐠 fish,🐬 dolphin,🐳 whale,🦈 shark,🐊 crocodile,🦖 trex,🐉 dragon,🌵 cactus,🌲 evergreen,🌳 tree,🌴 palm,🍀 clover,🍁 maple,🍄 mushroom,🌸 blossom,🌹 rose,🌻 sunflower,🌷 tulip,🌞 sun_face,🌙 moon,⭐ star,🌟 glowing_star,✨ sparkles,⚡ zap,🔥 fire,🌈 rainbow,☀️ sunny,⛅ partly_sunny,🌧️ rain,⛈️ storm,❄️ snowflake,☃️ snowman,🌊 ocean_wave,💧 droplet',
-  Food: '🍏 green_apple,🍎 apple,🍊 orange,🍋 lemon,🍌 banana,🍉 watermelon,🍇 grapes,🍓 strawberry,🍒 cherries,🍑 peach,🥭 mango,🍍 pineapple,🥥 coconut,🥝 kiwi,🍅 tomato,🥑 avocado,🌶️ hot_pepper,🌽 corn,🥕 carrot,🥔 potato,🥐 croissant,🍞 bread,🧀 cheese,🥚 egg,🍳 cooking,🥞 pancakes,🥓 bacon,🍗 drumstick,🍖 meat,🌭 hotdog,🍔 burger,🍟 fries,🍕 pizza,🌮 taco,🌯 burrito,🍜 ramen,🍝 spaghetti,🍣 sushi,🍤 shrimp,🍙 rice_ball,🍩 donut,🍪 cookie,🎂 birthday,🍰 cake,🧁 cupcake,🍫 chocolate,🍬 candy,🍭 lollipop,🍿 popcorn,🍦 ice_cream,☕ coffee,🍵 tea,🧋 boba,🥤 cup,🍺 beer,🍻 beers,🍷 wine,🍸 cocktail,🥂 cheers',
-  Activity: '⚽ soccer,🏀 basketball,🏈 football,⚾ baseball,🎾 tennis,🏐 volleyball,🎱 8ball,🏓 ping_pong,🥊 boxing,🥋 martial_arts,⛳ golf,🏹 bow_arrow,🎣 fishing,🛹 skateboard,⛸️ ice_skate,🎿 ski,🏆 trophy,🥇 gold_medal,🥈 silver_medal,🥉 bronze_medal,🏅 medal,🎮 video_game,🕹️ joystick,🎲 dice,🧩 puzzle,♟️ chess,🎯 dart,🎳 bowling,🎨 art,🎭 theater,🎤 microphone,🎧 headphones,🎸 guitar,🎹 piano,🥁 drum,🎺 trumpet,🎻 violin,🎬 clapper,🎉 tada,🎊 confetti,🎈 balloon,🎁 gift,🎃 jack_o_lantern,🎄 christmas_tree,🎆 fireworks',
-  Travel: '🚗 car,🚕 taxi,🚌 bus,🏎️ race_car,🚓 police_car,🚑 ambulance,🚒 fire_engine,🚲 bike,🛵 scooter,🏍️ motorcycle,🚂 train,✈️ airplane,🚀 rocket,🛸 ufo,🚁 helicopter,⛵ sailboat,🚢 ship,⚓ anchor,🗺️ map,🧭 compass,🏰 castle,🏯 japanese_castle,🗼 tower,🗽 statue_of_liberty,⛰️ mountain,🏔️ snow_mountain,🌋 volcano,🏕️ camping,🏖️ beach,🏝️ island,🏜️ desert,🏙️ city,🌃 night_city,🌉 bridge,🛤️ railway,🛣️ highway,🚦 traffic_light,🚧 construction,🪧 sign,🌍 earth_africa,🌎 earth_americas,🌏 earth_asia,🌌 milky_way',
-  Objects: '⌚ watch,📱 phone,💻 laptop,⌨️ keyboard,🖥️ desktop,🖨️ printer,🖱️ computer_mouse,💾 floppy,💿 cd,📷 camera,🎥 movie_camera,📺 tv,📻 radio,🔋 battery,🔌 plug,💡 bulb,🔦 flashlight,🕯️ candle,🏮 lantern,📚 books,📖 book,📝 memo,✏️ pencil,🖊️ pen,📌 pin,📎 paperclip,✂️ scissors,🔒 lock,🔓 unlock,🔑 key,🗝️ old_key,🔨 hammer,⚔️ swords,🛡️ shield,🔧 wrench,⚙️ gear,🧲 magnet,🧪 test_tube,🔭 telescope,💊 pill,🧸 teddy,🪄 magic_wand,🔮 crystal_ball,💎 gem,💰 moneybag,💵 dollar,💸 money_wings,💳 credit_card,🪙 coin,📈 chart_up,📉 chart_down,📦 package,✉️ envelope,📅 calendar,🗑️ wastebasket,⏰ alarm,⌛ hourglass',
-  Symbols: '✅ check,☑️ ballot_check,✔️ heavy_check,❌ x,❎ x_square,➕ plus,➖ minus,✖️ multiply,💯 100,🔴 red_circle,🟠 orange_circle,🟡 yellow_circle,🟢 green_circle,🔵 blue_circle,🟣 purple_circle,⚫ black_circle,⚪ white_circle,❗ exclamation,❓ question,‼️ bangbang,⁉️ interrobang,⚠️ warning,🚫 no_entry,⛔ stop,♻️ recycle,🔔 bell,🔕 no_bell,🎵 note,🎶 notes,💤 zzz,💢 anger,💥 boom,💫 dizzy,💬 speech,💭 thought,♾️ infinity,☮️ peace_symbol,☯️ yin_yang,♠️ spades,♥️ hearts_suit,♦️ diamonds,♣️ clubs,🆗 ok,🆒 cool,🆕 new,🆓 free,🔝 top,🔜 soon,🏁 checkered_flag,🚩 red_flag,🏳️‍🌈 rainbow_flag,🏴‍☠️ pirate_flag'
-};
-const EMOJI_CAT_ICON = { Recent: '🕘', Smileys: '😀', Gestures: '👋', Hearts: '❤️', Nature: '🐶', Food: '🍕', Activity: '⚽', Travel: '🚀', Objects: '💡', Symbols: '✅' };
-const EMOJI = {}; const EMOJI_LIST = [];
-for (const [cat, raw] of Object.entries(EMOJI_RAW)) {
-  EMOJI[cat] = raw.split(',').map(s => { const i = s.indexOf(' '); const o = { e: s.slice(0, i), n: s.slice(i + 1).trim(), c: cat }; EMOJI_LIST.push(o); return o; });
+/* ---------- Bastion emoji (original art, see emoji-art.js) ----------
+   Standard emoji are stored as normal characters so they still read correctly anywhere;
+   Bastion originals use :shortcodes:. Both are drawn with our own art when shown. */
+const BXE = window.BX_EMOJI || [];
+const stripVS = k => k.replace(/️/g, '');
+const EMO_BY_KEY = new Map(), EMO_BY_NAME = new Map();
+for (const e of BXE) { EMO_BY_KEY.set(e.k, e); EMO_BY_KEY.set(stripVS(e.k), e); EMO_BY_NAME.set(e.n, e); }
+const EMOJI_LIST = BXE.map(e => ({ e: e.k, n: e.n, kw: e.kw || '', c: e.c }));
+const EMOJI_CATS = window.BX_EMOJI_CATS || [];
+const EMOJI_CAT_ICON = { Recent: '🕘', Faces: '😀', Love: '❤️', Hands: '👋', Animals: '🐱', Food: '🍕', Nature: '🌸', Things: '🎁', Symbols: '✅', Bastion: ':bastion:' };
+const emojiName = k => (EMO_BY_KEY.get(k) || EMO_BY_KEY.get(stripVS(k)) || {}).n || '';
+const emoURLs = new Map();
+function emoURL(e) { if (!emoURLs.has(e.k)) emoURLs.set(e.k, 'data:image/svg+xml,' + encodeURIComponent(e.svg)); return emoURLs.get(e.k); }
+/** HTML for one emoji key (unicode or :shortcode:). Falls back to the plain character. */
+function emoji(k, cls = 'emj') {
+  const e = EMO_BY_KEY.get(k) || EMO_BY_KEY.get(stripVS(k)) || (/^:[a-z0-9_]+:$/.test(k) && EMO_BY_NAME.get(k.slice(1, -1)));
+  return e ? `<img class="${cls}" src="${emoURL(e)}" alt="${esc(e.k)}" title=":${esc(e.n)}:" draggable="false">` : esc(k);
 }
-const emojiName = e => (EMOJI_LIST.find(x => x.e === e) || {}).n || '';
+// one regex that finds every emoji we have art for (longest first, so ❤️‍🔥 wins over ❤️), plus :shortcodes:
+const EMO_RE = (() => {
+  const keys = [...new Set(BXE.filter(e => !e.k.startsWith(':')).flatMap(e => [e.k, stripVS(e.k)]))].sort((a, b) => b.length - a.length);
+  return new RegExp('(' + keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')️?|:([a-z0-9_]{2,32}):', 'gu');
+})();
+/** Swap emoji for our art inside already-escaped HTML, touching only text (never inside tags). */
+function emoText(html) {
+  if (!BXE.length) return html;
+  return String(html).split(/(<[^>]*>)/).map((part, i) => i % 2 ? part : part.replace(EMO_RE, (m, uni, name) => {
+    if (name) { const e = EMO_BY_NAME.get(name); return e ? emoji(':' + name + ':') : m; }
+    return emoji(uni);
+  })).join('');
+}
+const emoEsc = s => emoText(esc(s));
 
 /* ---------- themes ---------- */
 const svgUrl = s => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
-const EM = (items, size) => `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'>${items.map(([e, x, y, fs, r]) => `<text x='${x}' y='${y}' font-size='${fs}' transform='rotate(${r || 0} ${x} ${y})' font-family='Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif'>${e}</text>`).join('')}</svg>`;
+// Background patterns made from our own emoji art: [key, x, y(baseline), size, rotation]
+const EM = (items, w, h = w) => `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${items.map(([k, x, y, fs, r]) => {
+  const e = EMO_BY_KEY.get(k) || EMO_BY_NAME.get(String(k).replace(/:/g, '')); if (!e) return '';
+  const inner = e.svg.replace(/^<svg[^>]*>|<\/svg>$/g, '');
+  return `<g transform='translate(${x} ${y - fs}) rotate(${r || 0} ${fs / 2} ${fs / 2}) scale(${fs / 64})'>${inner}</g>`;
+}).join('')}</svg>`;
 const THEMES = [
   { id: 'bastion', name: 'Bastion', group: 'Classic', v: { bg: '#151A22', panel: '#1B212B', raised: '#252D39', line: '#313B49', text: '#ECE6D8', muted: '#97A1AE', accent: '#E9B44C', ink: '#1D1404' },
     pat: c => `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'><g fill='none' stroke='${c}' stroke-width='1.2'><path d='M48 0v96M0 48h96' stroke-dasharray='4 6'/><path d='M44 44h8v8h-8z' transform='rotate(45 48 48)'/></g></svg>`, size: '96px', op: .06 },
@@ -651,13 +736,110 @@ const THEMES = [
   { id: 'forge', name: 'Forge', group: 'Cool', v: { bg: '#170F0C', panel: '#1F1410', raised: '#2A1B15', line: '#3F2920', text: '#F6E7DA', muted: '#B79A87', accent: '#FF7A3D', ink: '#2A0E00' },
     pat: c => `<svg xmlns='http://www.w3.org/2000/svg' width='110' height='110'><g fill='${c}'><circle cx='20' cy='90' r='1.6'/><circle cx='28' cy='70' r='1'/><circle cx='70' cy='30' r='1.8'/><circle cx='86' cy='14' r='1.1'/><circle cx='52' cy='52' r='.9'/></g><path d='M20 90l8-20M70 30l16-16' stroke='${c}' stroke-width='.8' opacity='.6'/></svg>`, size: '110px', op: .3 },
   { id: 'duck', name: 'Rubber Duck', group: 'Funny', v: { bg: '#0F2730', panel: '#12303B', raised: '#183D4A', line: '#22525F', text: '#F2FBFF', muted: '#8EB8C6', accent: '#FFD23F', ink: '#2A2000' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
-    pat: () => EM([['🦆', 12, 46, 30, -8], ['🫧', 78, 30, 16, 0], ['🦆', 70, 104, 20, 14]], 130), size: '130px', op: .16 },
+    pat: () => EM([['🦆', 12, 46, 30, -8], ['💧', 80, 34, 14, 0], ['🦆', 70, 104, 22, 14]], 130), size: '130px', op: .16 },
   { id: 'pizza', name: 'Pizza Night', group: 'Funny', v: { bg: '#24110E', panel: '#2D1612', raised: '#3A1D17', line: '#552B21', text: '#FFF1DE', muted: '#D3A98C', accent: '#FFC145', ink: '#2B1800' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
-    pat: () => EM([['🍕', 10, 44, 30, -16], ['🧀', 78, 32, 18, 10], ['🍕', 66, 104, 22, 24]], 130), size: '130px', op: .15 },
+    pat: () => EM([['🍕', 10, 44, 30, -16], ['🍅', 80, 34, 18, 10], ['🍕', 66, 104, 22, 24]], 130), size: '130px', op: .15 },
   { id: 'catcafe', name: 'Cat Café', group: 'Funny', v: { bg: '#221A17', panel: '#2B211D', raised: '#382B25', line: '#4D3B33', text: '#FFF3EA', muted: '#C8AE9F', accent: '#FFA8C5', ink: '#2B0C16' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
-    pat: () => EM([['🐱', 12, 44, 28, -6], ['🐾', 80, 34, 16, 20], ['☕', 70, 102, 20, 0]], 130), size: '130px', op: .15 }
+    pat: () => EM([['🐱', 12, 44, 28, -6], ['💕', 80, 34, 16, 20], ['☕', 70, 102, 20, 0]], 130), size: '130px', op: .15 }
 ];
-const THEME_GROUPS = ['Classic', 'Cute', 'Money', 'Cool', 'Funny'];
+/* ---------- plant motifs for the Nightshade family (drawn around their own origin) ---------- */
+const NSP = {
+  g: (x, y, r, s, inner) => `<g transform='translate(${x} ${y}) rotate(${r}) scale(${s})'>${inner}</g>`,
+  leaf: (c) => `<path d='M0 0c8-10 22-10 28 0-6 10-20 10-28 0z' fill='${c}'/><path d='M2 0h22' stroke='#00000033' stroke-width='1'/>`,
+  berries: (c, hi, st) => `<path d='M0-20L-8-3M0-20V2M0-20l9 4' stroke='${st}' stroke-width='1.6' fill='none'/><circle cx='-8' cy='0' r='6' fill='${c}'/><circle cx='0' cy='6' r='6' fill='${c}'/><circle cx='9' cy='1' r='6' fill='${c}'/><circle cx='-9.6' cy='-1.8' r='1.6' fill='${hi}'/><circle cx='-1.6' cy='4.2' r='1.6' fill='${hi}'/><circle cx='7.4' cy='-.8' r='1.6' fill='${hi}'/>`,
+  bell: (c, st) => `<path d='M0-12V0' stroke='${st}' stroke-width='1.6'/><path d='M0 0c-9 0-13 8-13 18 3-2 5 0 6 2 2-3 5-3 7 0 2-3 5-3 7 0 1-2 3-4 6-2 0-10-4-18-13-18z' fill='${c}'/>`,
+  star: (p, cone) => [0, 72, 144, 216, 288].map(a => `<path transform='rotate(${a})' d='M0 0c-3.4-6-2.4-12.4 0-14.4 2.4 2 3.4 8.4 0 14.4z' fill='${p}'/>`).join('') + `<path d='M-2.6 1L0-8l2.6 9z' fill='${cone}'/>`,
+  trumpet: (c, edge) => `<path d='M-2.4 0L-17 27q3 7 7 3q3 7 7 2q3 7 6 2q3 7 7 2q4 5 7-3L2.4 0z' fill='${c}'/><path d='M-17 27q3 7 7 3q3 7 7 2q3 7 6 2q3 7 7 2q4 5 7-3' stroke='${edge}' stroke-width='1.6' fill='none'/><path d='M0 2v26M-6 8l-4 20M6 8l4 20' stroke='${edge}' stroke-width='.8' opacity='.6'/>`,
+  root: (c, leafc) => `<path d='M-3-24c-6-6-12-6-14-2 6 2 10 4 14 6zM3-24c6-6 12-6 14-2-6 2-10 4-14 6zM0-26v-6' stroke='${leafc}' stroke-width='2' fill='${leafc}'/><path d='M0-22c-8 0-11 6-11 13 0 5 2 8 5 10l-6 12 6-3 4-7c1 .6 3 .6 4 0l4 7 6 3-6-12c3-2 5-5 5-10 0-7-3-13-11-13z' fill='${c}'/><circle cx='-3.4' cy='-12' r='1.3' fill='#00000066'/><circle cx='3.4' cy='-12' r='1.3' fill='#00000066'/>`,
+  eggplant: (c, cap) => `<path d='M0 0c-10 4-16 16-12 26 4 8 16 6 20-4 3-8 2-18-8-22z' fill='${c}'/><path d='M-2-2l2-8 4 6 5-2-3 6z' fill='${cap}'/>`,
+  chili: (c, cap) => `<path d='M0 0c-2 12-10 22-22 26 16 2 28-8 28-26z' fill='${c}'/><path d='M0 0c1-4 4-7 8-8M0 0h6' stroke='${cap}' stroke-width='2.4' fill='none'/>`,
+  husk: (c, vein, fruit) => `<path d='M0 0c-13 6-15 22 0 32 15-10 13-26 0-32z' fill='${c}'/><path d='M0 0v32M0 0c-6 8-7 18 0 32M0 0c6 8 7 18 0 32' stroke='${vein}' stroke-width='1' fill='none'/><circle cx='0' cy='19' r='5' fill='${fruit}' opacity='.75'/><path d='M0 0v-6' stroke='${vein}' stroke-width='2'/>`,
+  tomato: (c, cap) => `<circle cx='0' cy='0' r='11' fill='${c}'/><path d='M0-11l-3-5 3 2 3-3-1 5 5-1-5 3z' fill='${cap}'/><circle cx='-4' cy='-4' r='2' fill='#ffffff55'/>`
+};
+const T = (w, h, inner) => `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${inner}</svg>`;
+const MORE_THEMES = [
+  // ---- Nightshade family ----
+  { id: 'nightshade', name: 'Nightshade', group: 'Nightshade', v: { bg: '#120E1A', panel: '#191324', raised: '#231A33', line: '#352850', text: '#EDE6FA', muted: '#A598C2', accent: '#B48CFF', ink: '#1C0F33' }, display: "'Fraunces',Georgia,serif",
+    pat: c => T(150, 150, NSP.g(30, 40, -20, 1, NSP.leaf('#3F6B45')) + NSP.g(52, 52, 0, 1, NSP.berries('#2A1B45', '#9C87D8', '#4E7D4C')) + NSP.g(112, 96, 10, .9, NSP.star(c, '#FFD94A')) + NSP.g(92, 120, 160, .8, NSP.leaf('#3F6B45'))), size: '150px', op: .24 },
+  { id: 'belladonna', name: 'Belladonna', group: 'Nightshade', v: { bg: '#130C18', panel: '#1B1222', raised: '#271930', line: '#3D2849', text: '#F3E8F7', muted: '#B39BBE', accent: '#C27BFF', ink: '#220B33' }, display: "'Fraunces',Georgia,serif",
+    pat: () => T(140, 140, NSP.g(34, 26, 0, 1.05, NSP.bell('#7A3BD4', '#4E7D4C')) + NSP.g(100, 92, -10, 1, NSP.berries('#0D0A12', '#8F84A8', '#4E7D4C')) + NSP.g(18, 108, 30, .8, NSP.leaf('#355E3B'))), size: '140px', op: .26 },
+  { id: 'bittersweet', name: 'Bittersweet', group: 'Nightshade', v: { bg: '#170E16', panel: '#20131F', raised: '#2D1A2B', line: '#462A44', text: '#FAEAF3', muted: '#C39DB5', accent: '#A77BFF', ink: '#1B0B33' },
+    pat: () => T(130, 130, NSP.g(32, 34, 0, 1, NSP.star('#9B5CF0', '#FFD23F')) + NSP.g(96, 88, 15, 1, NSP.berries('#E8304E', '#FFB3BE', '#4E7D4C')) + NSP.g(100, 26, 20, .7, NSP.star('#B48CFF', '#FFD23F'))), size: '130px', op: .23 },
+  { id: 'mandrake', name: 'Mandrake', group: 'Nightshade', v: { bg: '#18120E', panel: '#201813', raised: '#2C2119', line: '#443326', text: '#F5EBE0', muted: '#BBA48E', accent: '#D69ACB', ink: '#2B0F26' }, display: "'Fraunces',Georgia,serif",
+    pat: () => T(140, 140, NSP.g(40, 54, -8, 1, NSP.root('#C9A07A', '#5E8A4A')) + NSP.g(104, 112, 12, .75, NSP.root('#B88C66', '#5E8A4A')) + NSP.g(104, 30, 0, .8, NSP.star('#B784C9', '#FFD94A'))), size: '140px', op: .23 },
+  { id: 'moonflower', name: 'Moonflower', group: 'Nightshade', v: { bg: '#0B0F1E', panel: '#101628', raised: '#172036', line: '#25314F', text: '#EEF1FF', muted: '#97A2C6', accent: '#E3E6FF', ink: '#141A35' }, display: "'Fraunces',Georgia,serif",
+    pat: () => T(150, 150, `<circle cx='120' cy='26' r='12' fill='#F2F0FF'/><circle cx='126' cy='22' r='10' fill='#0B0F1E'/>` + NSP.g(40, 34, -25, 1, NSP.trumpet('#F4F2FF', '#C9C6F0')) + NSP.g(104, 98, 20, .85, NSP.trumpet('#E8E4FF', '#C9C6F0')) + NSP.g(20, 116, -40, .8, NSP.leaf('#3E5E63'))), size: '150px', op: .20 },
+  { id: 'henbane', name: 'Henbane', group: 'Nightshade', v: { bg: '#16140C', panel: '#1E1B11', raised: '#2A2617', line: '#423C23', text: '#F7F2DD', muted: '#BDB38A', accent: '#E8D27A', ink: '#2A2400' },
+    pat: () => T(130, 130, NSP.g(36, 36, 0, 1.1, [0, 72, 144, 216, 288].map(a => `<path transform='rotate(${a})' d='M0 0c-7-4-9-12-4-15 4-2 7 2 4 15z' fill='#E8D98F'/><path transform='rotate(${a})' d='M0 0l-2-11M0 0l1-12' stroke='#6B2E6B' stroke-width='.9'/>`).join('') + `<circle r='3.4' fill='#3A123A'/>`) + NSP.g(100, 96, 30, .9, NSP.leaf('#5E7A3E'))), size: '130px', op: .20 },
+  { id: 'blacknightshade', name: 'Black Nightshade', group: 'Nightshade', v: { bg: '#0D110D', panel: '#131913', raised: '#1B241B', line: '#2B3A2B', text: '#E9F2E6', muted: '#9AB096', accent: '#D7F0CF', ink: '#122012' },
+    pat: () => T(130, 130, NSP.g(30, 30, 0, .8, NSP.star('#F4F6F2', '#FFD23F')) + NSP.g(58, 46, 10, .7, NSP.star('#F4F6F2', '#FFD23F')) + NSP.g(98, 90, 0, 1, NSP.berries('#08080A', '#7C8A79', '#5E8A4A')) + NSP.g(20, 104, -20, .8, NSP.leaf('#3F6B45'))), size: '130px', op: .23 },
+  { id: 'aubergine', name: 'Aubergine', group: 'Nightshade', v: { bg: '#170E1F', panel: '#1F1329', raised: '#2B1B39', line: '#432A57', text: '#F4EAFF', muted: '#B59ECB', accent: '#B07CF0', ink: '#1E0B33' },
+    pat: () => T(120, 120, NSP.g(30, 26, -20, 1, NSP.eggplant('#7A3BD4', '#4FC27E')) + NSP.g(90, 76, 25, .8, NSP.eggplant('#8F55E0', '#4FC27E'))), size: '120px', op: .18 },
+  { id: 'chili', name: 'Chili Pepper', group: 'Nightshade', v: { bg: '#1D0C0A', panel: '#26100D', raised: '#341712', line: '#52241C', text: '#FFEDE6', muted: '#D4A196', accent: '#FF5A3C', ink: '#2A0700' },
+    pat: () => T(120, 120, NSP.g(44, 16, 10, 1, NSP.chili('#E8304E', '#4FC27E')) + NSP.g(104, 70, 40, .8, NSP.chili('#FF8A1F', '#4FC27E'))), size: '120px', op: .18 },
+  { id: 'lanternhusk', name: 'Lantern Husk', group: 'Nightshade', v: { bg: '#1A110B', panel: '#22170F', raised: '#2F2015', line: '#4A3220', text: '#FFF1E2', muted: '#CDA785', accent: '#FF9A3C', ink: '#2A1200' }, display: "'Fraunces',Georgia,serif",
+    pat: () => T(130, 130, NSP.g(32, 20, -10, 1, NSP.husk('#FF8A3D', '#B85A1A', '#FFD23F')) + NSP.g(96, 80, 14, .8, NSP.husk('#F0A04B', '#B85A1A', '#FFD23F'))), size: '130px', op: .18 },
+  { id: 'heirloom', name: 'Heirloom Tomato', group: 'Nightshade', v: { bg: '#1B0F0D', panel: '#241411', raised: '#311B17', line: '#4E2B24', text: '#FFEEEA', muted: '#D2A19A', accent: '#FF6B5A', ink: '#2A0703' },
+    pat: () => T(120, 120, NSP.g(30, 30, 0, 1, NSP.tomato('#E8304E', '#4FC27E')) + NSP.g(88, 84, 20, .8, NSP.tomato('#FFB13D', '#4FC27E')) + NSP.g(90, 20, 0, .6, NSP.tomato('#9B2A3A', '#4FC27E'))), size: '120px', op: .17 },
+
+  // ---- Cool ----
+  { id: 'glacier', name: 'Glacier', group: 'Cool', v: { bg: '#0B1820', panel: '#0F2029', raised: '#152B36', line: '#20404F', text: '#E8F8FF', muted: '#8FB2C2', accent: '#7FE3FF', ink: '#002330' },
+    pat: c => T(120, 120, `<path d='M0 90l30-40 18 20 26-40 46 60' fill='none' stroke='${c}' stroke-width='1.4'/><path d='M74 30l6 10M30 50l4 8' stroke='${c}' stroke-width='1'/>`), size: '120px', op: .14 },
+  { id: 'aurora', name: 'Aurora', group: 'Cool', fx: 'glow', v: { bg: '#071413', panel: '#0B1D1B', raised: '#102825', line: '#1B3D38', text: '#E2FFF6', muted: '#86B8AA', accent: '#4DFFC3', ink: '#00261A' },
+    pat: () => T(200, 120, `<path d='M0 60c40-40 80 20 120-10s60-30 80-10' fill='none' stroke='#4DFFC3' stroke-width='3' opacity='.7'/><path d='M0 80c40-30 80 20 120-6s60-24 80-4' fill='none' stroke='#B37BFF' stroke-width='2' opacity='.6'/><circle cx='30' cy='18' r='1.4' fill='#fff'/><circle cx='150' cy='30' r='1' fill='#fff'/>`), size: '200px 120px', op: .22 },
+  { id: 'blueprint', name: 'Blueprint', group: 'Cool', v: { bg: '#0E2A4D', panel: '#12335C', raised: '#183F6E', line: '#2A5A92', text: '#EAF4FF', muted: '#9DBDE4', accent: '#FFFFFF', ink: '#0E2A4D' }, ui: "'IBM Plex Mono',ui-monospace,monospace", radius: [2, 3, 5],
+    pat: () => T(40, 40, `<path d='M0 .5h40M.5 0v40' stroke='#ffffff' stroke-width='1' opacity='.5'/><path d='M0 20.5h40M20.5 0v40' stroke='#ffffff' stroke-width='.5' opacity='.3'/>`), size: '40px', op: .22 },
+  { id: 'cyberpink', name: 'Cyber Pink', group: 'Cool', fx: 'glow', v: { bg: '#12081A', panel: '#190C24', raised: '#241133', line: '#3A1C52', text: '#FFE8FB', muted: '#C99BC7', accent: '#FF3DCB', ink: '#2A0021' }, ui: "'Chakra Petch',system-ui,sans-serif", display: "'Chakra Petch',system-ui,sans-serif", radius: [3, 5, 8],
+    pat: () => T(90, 90, `<path d='M0 45h30l10-10h50' fill='none' stroke='#2EF2FF' stroke-width='1'/><circle cx='40' cy='35' r='2.4' fill='#FF3DCB'/><path d='M60 90V60l10-10' fill='none' stroke='#FF3DCB' stroke-width='1'/>`), size: '90px', op: .3 },
+  { id: 'volcanic', name: 'Volcanic', group: 'Cool', v: { bg: '#140B09', panel: '#1C100D', raised: '#271612', line: '#3F221B', text: '#FFEDE5', muted: '#C69C8D', accent: '#FF5A1F', ink: '#2A0A00' },
+    pat: () => T(140, 140, `<path d='M0 70l20-6 14 10 22-14 18 8 24-16 22 10 20-4M40 0l6 20-8 18 10 26M110 140l-6-22 10-20-8-24' fill='none' stroke='#FF5A1F' stroke-width='1.6'/>`), size: '140px', op: .3 },
+  { id: 'thunder', name: 'Thunderstorm', group: 'Cool', v: { bg: '#0F1218', panel: '#151A22', raised: '#1D242F', line: '#2D3746', text: '#EEF2F8', muted: '#97A3B5', accent: '#FFE14D', ink: '#2A2400' },
+    pat: c => T(130, 130, `<path d='M40 10L26 40h12l-8 26 22-34H40l8-22z' fill='${c}'/><path d='M100 70v8M110 76v8M90 84v8M104 96v8' stroke='#7FB6FF' stroke-width='2' stroke-linecap='round'/>`), size: '130px', op: .18 },
+
+  // ---- Cute ----
+  { id: 'strawberrymilk', name: 'Strawberry Milk', group: 'Cute', v: { bg: '#24141C', panel: '#2D1923', raised: '#3B212E', line: '#583244', text: '#FFF0F6', muted: '#D6A9BD', accent: '#FF8FB8', ink: '#33071A' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", radius: [10, 14, 22],
+    pat: () => EM([['🍓', 14, 46, 28, -12], ['💕', 84, 36, 16, 0], ['🍓', 70, 108, 20, 18]], 130), size: '130px', op: .16 },
+  { id: 'cottoncandy', name: 'Cotton Candy', group: 'Cute', v: { bg: '#1A1626', panel: '#211C31', raised: '#2B2541', line: '#433A63', text: '#F6F1FF', muted: '#B7AED7', accent: '#8FD3FF', ink: '#0B2433' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", radius: [10, 14, 22],
+    pat: () => T(140, 110, `<path d='M14 50c-8 0-12-6-10-12 2-5 8-6 11-4 1-7 8-11 15-8 4-6 14-5 16 3 7-1 11 6 8 12-1 6-7 9-12 9z' fill='#FFB3D9'/><path d='M84 96c-8 0-12-6-10-12 2-5 8-6 11-4 1-7 8-11 15-8 4-6 14-5 16 3 7-1 11 6 8 12-1 6-7 9-12 9z' fill='#9AD8FF'/>`), size: '140px 110px', op: .2 },
+  { id: 'bunnymeadow', name: 'Bunny Meadow', group: 'Cute', v: { bg: '#132018', panel: '#18291F', raised: '#203428', line: '#30503C', text: '#F0FFF4', muted: '#A4C8B0', accent: '#FFB3CC', ink: '#33071A' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", radius: [10, 14, 22],
+    pat: () => EM([['🐰', 14, 46, 28, -6], ['🌸', 84, 36, 16, 0], ['🍀', 72, 108, 20, 12]], 130), size: '130px', op: .17 },
+
+  // ---- Money ----
+  { id: 'diamond', name: 'Diamond Cut', group: 'Money', v: { bg: '#0A1620', panel: '#0E1E2B', raised: '#132837', line: '#1F3D52', text: '#E8FBFF', muted: '#8FB7C8', accent: '#7FE7FF', ink: '#00252F' }, display: "'Fraunces',Georgia,serif",
+    pat: () => EM([['💎', 14, 46, 26, -10], ['✨', 84, 34, 16, 0], ['💎', 74, 106, 18, 14]], 130), size: '130px', op: .16 },
+  { id: 'crypto', name: 'To The Moon', group: 'Money', v: { bg: '#15110A', panel: '#1D170D', raised: '#282012', line: '#40331C', text: '#FFF5E3', muted: '#C7B087', accent: '#FFA41B', ink: '#2A1800' },
+    pat: () => EM([['🪙', 12, 44, 26, 0], ['🚀', 80, 40, 20, -20], ['📈', 70, 106, 20, 0], ['🌙', 30, 110, 16, 0]], 130), size: '130px', op: .15 },
+  { id: 'treasury', name: 'Royal Treasury', group: 'Money', v: { bg: '#1A0B0F', panel: '#230F15', raised: '#30151D', line: '#4D2230', text: '#FFF0E8', muted: '#D2A497', accent: '#F2C94C', ink: '#2A1C00' }, display: "'Fraunces',Georgia,serif",
+    pat: () => EM([['👑', 14, 44, 26, -8], ['🪙', 84, 34, 16, 0], ['💰', 70, 108, 22, 8]], 130), size: '130px', op: .16 },
+
+  // ---- Nature ----
+  { id: 'sakura', name: 'Sakura', group: 'Nature', v: { bg: '#1E141A', panel: '#271A22', raised: '#33222D', line: '#4E3445', text: '#FFF1F6', muted: '#D2A9BC', accent: '#FFA6C9', ink: '#3A0C22' }, display: "'Fraunces',Georgia,serif",
+    pat: () => EM([['🌸', 12, 40, 24, -10], ['🌸', 80, 36, 14, 20], ['🌸', 66, 104, 18, 40]], 130), size: '130px', op: .2 },
+  { id: 'deepforest', name: 'Deep Forest', group: 'Nature', v: { bg: '#0D150F', panel: '#121C14', raised: '#18261B', line: '#253B29', text: '#EAF6EC', muted: '#97B39C', accent: '#7DDB8B', ink: '#062A10' },
+    pat: () => T(120, 120, `<path d='M30 10l14 24h-8l12 20h-9l11 18H8l11-18h-9l12-20h-8z' fill='#3E8E4E'/><path d='M90 60l10 18h-6l8 14h-6l8 14H70l8-14h-6l8-14h-6z' fill='#2E7A3E'/>`), size: '120px', op: .22 },
+  { id: 'desertbloom', name: 'Desert Bloom', group: 'Nature', v: { bg: '#1D150D', panel: '#261C12', raised: '#332618', line: '#4F3B25', text: '#FFF4E4', muted: '#D2B58E', accent: '#FF9466', ink: '#2A0F00' },
+    pat: () => EM([['🌵', 14, 46, 26, 0], ['☀️', 84, 34, 16, 0], ['🌵', 74, 108, 18, 0]], 130), size: '130px', op: .16 },
+
+  // ---- Funny ----
+  { id: 'taco', name: 'Taco Tuesday', group: 'Funny', v: { bg: '#1F150A', panel: '#281C0E', raised: '#352614', line: '#523B1F', text: '#FFF4E0', muted: '#D6B78C', accent: '#FFC233', ink: '#2A1800' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
+    pat: () => EM([['🌮', 12, 44, 28, -10], ['🌶️', 84, 34, 16, 20], ['🌮', 70, 106, 20, 14]], 130), size: '130px', op: .16 },
+  { id: 'googly', name: 'Googly Eyes', group: 'Funny', v: { bg: '#141820', panel: '#1A1F29', raised: '#222937', line: '#333D52', text: '#F2F5FA', muted: '#9DA7B9', accent: '#FFE14D', ink: '#2A2400' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
+    pat: () => T(130, 130, `<circle cx='26' cy='30' r='12' fill='#fff'/><circle cx='30' cy='35' r='6' fill='#111'/><circle cx='52' cy='30' r='12' fill='#fff'/><circle cx='47' cy='24' r='6' fill='#111'/><circle cx='94' cy='96' r='9' fill='#fff'/><circle cx='91' cy='92' r='4.4' fill='#111'/><circle cx='113' cy='96' r='9' fill='#fff'/><circle cx='117' cy='100' r='4.4' fill='#111'/>`), size: '130px', op: .16 },
+  { id: 'bananasplit', name: 'Banana Split', group: 'Funny', v: { bg: '#1C180C', panel: '#242010', raised: '#302A16', line: '#4A4222', text: '#FFFBE6', muted: '#CFC58F', accent: '#FFE14D', ink: '#2A2400' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
+    pat: () => EM([['🍌', 12, 44, 28, -16], ['🍦', 84, 36, 16, 10], ['🍌', 68, 106, 22, 24]], 130), size: '130px', op: .16 },
+  { id: 'frogpond', name: 'Frog Pond', group: 'Funny', v: { bg: '#0D1A14', panel: '#11231B', raised: '#172F24', line: '#244A39', text: '#ECFFF5', muted: '#98C2AD', accent: '#7DDB6A', ink: '#0B2A06' }, ui: "'Fredoka','Figtree',system-ui,sans-serif", display: "'Fredoka','Figtree',sans-serif", radius: [10, 14, 22],
+    pat: () => EM([['🐸', 12, 44, 28, -6], ['💧', 86, 32, 12, 0], ['🐸', 70, 106, 20, 10]], 130), size: '130px', op: .16 },
+
+  // ---- Light ----
+  { id: 'cloudnine', name: 'Cloud Nine', group: 'Light', light: true, v: { bg: '#F2F5FB', panel: '#FFFFFF', raised: '#E6ECF6', line: '#D2DBEA', text: '#1E2433', muted: '#5D6880', accent: '#6C5CE7', ink: '#FFFFFF' },
+    pat: c => T(140, 100, `<path d='M20 50c-7 0-11-5-9-10 2-4 7-5 10-3 1-6 7-9 13-7 4-5 12-4 14 3 6-1 9 5 7 10-1 5-6 7-10 7z' fill='${c}'/>`), size: '140px 100px', op: .07 },
+  { id: 'mintpaper', name: 'Mint Paper', group: 'Light', light: true, v: { bg: '#EEF6F2', panel: '#FFFFFF', raised: '#E0EEE7', line: '#C8DDD2', text: '#16251E', muted: '#557063', accent: '#1F9D6A', ink: '#FFFFFF' },
+    pat: c => T(96, 96, `<path d='M48 0v96M0 48h96' stroke='${c}' stroke-width='1.2' stroke-dasharray='4 6' fill='none'/>`), size: '96px', op: .08 }
+];
+THEMES.push(...MORE_THEMES);
+// Daybreak moves to the light themes
+THEMES.find(t => t.id === 'daybreak').group = 'Light';
+const THEME_GROUPS = ['Classic', 'Nightshade', 'Cool', 'Cute', 'Nature', 'Money', 'Funny', 'Light'];
 
 function applyTheme(id) {
   const t = THEMES.find(x => x.id === id) || THEMES[0];
@@ -672,6 +854,7 @@ function applyTheme(id) {
   r.setProperty('--pattern-size', t.size || '120px'); r.setProperty('--pattern-op', t.op ?? .06);
   r.setProperty('--shadow', t.light ? '0 14px 40px rgba(20,30,50,.18)' : '0 18px 50px rgba(0,0,0,.45)');
   document.body.dataset.theme = t.id;
+  document.body.classList.toggle('light', !!t.light);
   if (t.fx) document.body.dataset.fx = t.fx; else delete document.body.dataset.fx;
   document.documentElement.style.colorScheme = t.light ? 'light' : 'dark';
   const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.content = v.panel;
@@ -732,12 +915,12 @@ const DEMO_USERS = [
   { id: 'u_pip', username: 'pip', displayName: 'Pip Danvers', pronouns: 'he/him', bio: 'Courier. If it fits in a satchel, I can get it there by sundown.', bannerColor: '#3A4A63', accent: '#6E86B0', status: 'offline', customStatus: '' }
 ];
 const DEMO_REPLIES = {
-  u_wren: { q: ['Good question. Give me a minute to check the map.', 'Probably the left fork, honestly. It always is.', 'I think so? I will mark it on the chart either way.'], a: ['Oh, saving that one to the atlas folder.', 'That is gorgeous. Adding it to the wall.'], g: ['Ha, noted.', 'Same thought here. Let us do it.', 'I will bring the good lantern.', 'Perfect. The road is ours then.'], r: ['❤️', '🔥', '🗺️'] },
+  u_wren: { q: ['Good question. Give me a minute to check the map.', 'Probably the left fork, honestly. It always is.', 'I think so? I will mark it on the chart either way.'], a: ['Oh, saving that one to the atlas folder.', 'That is gorgeous. Adding it to the wall.'], g: ['Ha, noted.', 'Same thought here. Let us do it.', 'I will bring the good lantern.', 'Perfect. The road is ours then.'], r: ['❤️', '🔥', ':signpost:'] },
   u_juno: { q: ['Depends. Is there coffee involved?', 'Ask me again after sunrise.', 'Short answer: yes. Long answer: also yes, but grumpier.'], a: ['Received. Filing it under suspicious.', 'I squinted at it for a full minute. Approved.'], g: ['Mm. Go on.', 'The gate is quiet. Keep talking.', 'That tracks.', 'Bold of you. I respect it.'], r: ['😂', '👀', '🫡'] },
   u_theo: { q: ['Only if there is pizza.', 'Absolutely not. Okay, maybe.', 'Let me consult my snack council.'], a: ['WOW. Framing this.', 'This is going in my song.'], g: ['LOL', 'I am writing a ballad about this exact moment.', 'Say less 🍕', 'Bring snacks and I am there.'], r: ['😂', '🍕', '🎉'] },
-  u_sable: { q: ['Hm. Let me finish this blade and I will think on it.', 'Yes, if the stars agree.'], a: ['Nice. Steady hands made that.'], g: ['Back at the anvil, talk soon.', 'Sounds good.'], r: ['🔥', '⚔️'] },
+  u_sable: { q: ['Hm. Let me finish this blade and I will think on it.', 'Yes, if the stars agree.'], a: ['Nice. Steady hands made that.'], g: ['Back at the anvil, talk soon.', 'Sounds good.'], r: ['🔥', ':swords:'] },
   u_mira: { q: ['I have three books on that. Want the short one?', 'Check the west wing, second shelf. Probably.'], a: ['Cataloguing this immediately.'], g: ['Quietly delighted.', 'Noted in the ledger.'], r: ['📚', '✨'] },
-  u_pip: { q: ['On my way. Sort of.', 'By sundown, guaranteed.'], a: ['Package received!'], g: ['Running, talk later!', 'Got it.'], r: ['🏃', '📦'] }
+  u_pip: { q: ['On my way. Sort of.', 'By sundown, guaranteed.'], a: ['Package received!'], g: ['Running, talk later!', 'Got it.'], r: ['⚡', '🎁'] }
 };
 
 class LocalBackend {
@@ -751,7 +934,7 @@ class LocalBackend {
     const users = (await DB.get('kv', 'users')) || {};
     const contacts = (await DB.get('kv', 'contacts')) || [];
     const msgs = await DB.all('messages');
-    return { me, users: [...DEMO_USERS.map(u => ({ ...u, createdAt: u.createdAt || Date.now() - 864e5 * 120 })), ...Object.values(users)], contacts, messages: msgs };
+    return { me, users: [...DEMO_USERS.map(u => ({ ...u, createdAt: u.createdAt || Date.now() - 864e5 * 120 })), ...Object.values(users)], contacts, messages: msgs, declined: (await DB.get('kv', 'declined')) || {} };
   }
   async createProfile({ displayName, username }) {
     if (DEMO_USERS.some(u => u.username === username)) throw new Error(`@${username} is already taken. Try another username.`);
@@ -769,7 +952,9 @@ class LocalBackend {
       ['u_juno', me.id, 'Crows can remember human faces for years. And they hold grudges.', now - 25 * H],
       ['u_juno', 'u_juno', 'That explains the one by the tower. It **hates** me.', now - 25 * H + 3 * M, { '😂': [me.id] }],
       ['u_theo', 'u_theo', `@${username} are you coming to the tavern thing or not 👀`, now - 18 * M],
-      ['u_theo', 'u_theo', 'there will be pizza. ||I am bringing my lute||', now - 17 * M]
+      ['u_theo', 'u_theo', 'there will be pizza. ||I am bringing my lute||', now - 17 * M],
+      ['u_pip', 'u_pip', 'Hi! I am Pip, the courier from the east road 📦', now - 9 * M],
+      ['u_pip', 'u_pip', 'Wren said you might want a package run to the north pass? :scroll:', now - 8 * M]
     ];
     for (const [peer, from, text, ts, reactions] of seed) {
       await DB.put('messages', { id: uid(), peer, from, to: from === me.id ? peer : me.id, text, ts, reactions: reactions || {}, attachments: [], replyTo: null });
@@ -803,6 +988,8 @@ class LocalBackend {
     return u;
   }
   async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); }
+  async accept(id) { const c = (await DB.get('kv', 'contacts')) || []; if (!c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const d = (await DB.get('kv', 'declined')) || {}; delete d[id]; await DB.put('kv', d, 'declined'); return DEMO_USERS.find(u => u.id === id); }
+  async decline(id) { const d = (await DB.get('kv', 'declined')) || {}; d[id] = Date.now(); await DB.put('kv', d, 'declined'); return d; }
   async send(peer, { text, files, replyTo }, onProg) {
     const atts = [];
     try {
@@ -880,7 +1067,7 @@ class ServerBackend {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.t === 'hello') {
         helloed = true; this.retry = 0; setConn(true);
-        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, messages: Object.values(d.convos || {}).flat() };
+        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
         if (onHello) { const f = onHello; onHello = null; onFail = null; f(data); } else emit({ t: 'resync', data });
         return;
       }
@@ -937,6 +1124,8 @@ class ServerBackend {
   addContact(username) { return this.rpc('add', { username: username.trim().toLowerCase().replace(/^@/, '') }); }
   removeContact(id) { return this.rpc('remove', { id }); }
   block(id, on) { return this.rpc(on ? 'block' : 'unblock', { id }); }
+  accept(id) { return this.rpc('accept', { id }); }
+  decline(id) { return this.rpc('decline', { id }); }
   logoutAll() { return this.rpc('logoutAll'); }
   typing(peer) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t: 'typing', to: peer })); }
   /** File links are private and expire, so they're fetched from the server in batches and refreshed when old. */
@@ -992,7 +1181,7 @@ const S = {
   backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {},
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
-  settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false }, ls.get('bc.settings', {}))
+  settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
 };
 const saveSettings = () => ls.set('bc.settings', S.settings);
 const isPhone = () => document.body.classList.contains('phone');
@@ -1019,9 +1208,9 @@ function loadSnapshot(d) {
   S.msgs = new Map();
   for (const m of d.messages || []) { const p = peerOf(m); if (!S.msgs.has(p)) S.msgs.set(p, []); S.msgs.get(p).push(m); }
   for (const arr of S.msgs.values()) arr.sort((a, b) => a.ts - b.ts);
-  for (const p of S.msgs.keys()) if (!S.contacts.includes(p) && S.users.has(p)) S.contacts.push(p);
   S.lastRead = ls.get('bc.read.' + S.me.id, {});
   S.blocked = d.blocked || [];
+  S.declined = d.declined || {};
 }
 function onEvent(e) {
   switch (e.t) {
@@ -1040,13 +1229,13 @@ function onEvent(e) {
       const arr = S.msgs.get(p);
       if (arr.some(x => x.id === m.id)) return;
       arr.push(m); arr.sort((a, b) => a.ts - b.ts);
-      if (!S.contacts.includes(p)) S.contacts.unshift(p);
+      if (m.from === S.me.id && !S.contacts.includes(p)) S.contacts.unshift(p);
       S.typing.delete(p);
       if (m.from !== S.me.id) {
         const viewing = S.active === p && !document.hidden && (!isPhone() || chatOpen());
         if (viewing) markRead(p); else notifyIncoming(m, p);
       } else { markRead(p); S.stick = true; }
-      renderList(); if (S.active === p) { renderMessages(); renderTyping(); }
+      renderList(); if (S.active === p) { renderMessages(); renderTyping(); renderRequestBar(); }
       updateTitle();
       break;
     }
@@ -1070,33 +1259,68 @@ function onEvent(e) {
       break;
     }
     case 'error': toast(e.error || 'Something went wrong on the server.', true); break;
+    case 'call:incoming': case 'call:accepted': case 'call:signal': case 'call:ended': case 'call:taken': Calls.onEvent(e); break;
   }
 }
 
 /* ---------- unread / notifications ---------- */
+/** People who messaged you but you haven't accepted yet (and didn't decline since their last message). */
+function isRequest(p) {
+  if (!S.me || p === S.me.id || S.contacts.includes(p) || !S.users.has(p) || (S.blocked || []).includes(p)) return false;
+  const since = (S.declined || {})[p] || 0;
+  return (S.msgs.get(p) || []).some(m => m.from === p && m.ts > since);
+}
+const requestIds = () => [...S.msgs.keys()].filter(isRequest);
 function unreadOf(p) { const lr = S.lastRead[p] || 0; return (S.msgs.get(p) || []).filter(m => m.from !== S.me.id && m.ts > lr); }
 function markRead(p) {
   const arr = S.msgs.get(p) || []; const last = arr.length ? arr[arr.length - 1].ts : 0;
   S.lastRead[p] = Math.max(Date.now(), last); ls.set('bc.read.' + S.me.id, S.lastRead); updateTitle();
 }
 function updateTitle() {
-  const n = S.contacts.reduce((a, p) => a + unreadOf(p).length, 0);
+  const n = [...S.contacts, ...requestIds()].reduce((a, p) => a + unreadOf(p).length, 0);
   document.title = (n ? `(${n}) ` : '') + 'Bastion Crossroads';
   try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch {}
 }
-let audioCtx;
-function chime(strong) {
-  try {
-    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
-    const t = audioCtx.currentTime;
-    (strong ? [660, 880, 1320] : [740, 988]).forEach((f, i) => {
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
-      const s = t + i * .09; g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(.12, s + .01); g.gain.exponentialRampToValueAtTime(.0001, s + .35);
-      o.start(s); o.stop(s + .4);
-    });
-  } catch {}
+/* ---------- sounds: louder, with a volume setting and several styles ---------- */
+let audioCtx, audioOut;
+function audio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // a compressor lets the sounds be loud without crackling
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 5; comp.attack.value = .002; comp.release.value = .2;
+    audioOut = audioCtx.createGain(); audioOut.connect(comp); comp.connect(audioCtx.destination);
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  audioOut.gain.value = 1.6 * Math.pow((S.settings.volume ?? 85) / 100, 1.4);
+  return audioCtx;
 }
+// browsers only allow sound after the person has touched the page once
+['pointerdown', 'keydown'].forEach(t => window.addEventListener(t, () => { try { audio(); } catch {} }, { once: true, capture: true }));
+function tone(f, start, dur, { type = 'sine', peak = .5, attack = .008, bend = 0, filter } = {}) {
+  const ctx = audioCtx, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, start);
+  if (bend) o.frequency.exponentialRampToValueAtTime(Math.max(40, f * bend), start + dur);
+  let node = o;
+  if (filter) { const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = filter; o.connect(fl); node = fl; }
+  node.connect(g); g.connect(audioOut);
+  g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(peak, start + attack); g.gain.exponentialRampToValueAtTime(.0001, start + dur);
+  o.start(start); o.stop(start + dur + .05);
+}
+const SOUNDS = {
+  chime: { name: 'Chime', play(t, strong) { (strong ? [784, 988, 1319, 1568] : [880, 1175]).forEach((f, i) => { tone(f, t + i * .09, .5, { peak: .55 }); tone(f * 2, t + i * .09, .25, { type: 'triangle', peak: .12 }); }); } },
+  bell: { name: 'Bell', play(t, strong) { const hit = (f, s) => { tone(f, s, 1.4, { peak: .55 }); tone(f * 2.76, s, .7, { peak: .18 }); tone(f * 5.4, s, .35, { peak: .08 }); }; hit(strong ? 1046 : 880, t); if (strong) hit(1318, t + .22); } },
+  pop: { name: 'Pop', play(t, strong) { const n = strong ? 3 : 2; for (let i = 0; i < n; i++) tone(900 + i * 220, t + i * .1, .14, { type: 'square', peak: .55, bend: .45, filter: 2600 }); } },
+  horn: { name: 'Horn', play(t, strong) { const seq = strong ? [392, 523, 659] : [392, 523]; seq.forEach((f, i) => tone(f, t + i * .17, .3, { type: 'sawtooth', peak: .6, attack: .02, filter: 1800 })); } },
+  crystal: { name: 'Crystal', play(t, strong) { (strong ? [1568, 2093, 2637, 3136] : [2093, 2637, 3136]).forEach((f, i) => tone(f, t + i * .06, .6, { type: 'triangle', peak: .3 })); } }
+};
+function chime(strong, style) {
+  try { const ctx = audio(); (SOUNDS[style || S.settings.soundStyle] || SOUNDS.chime).play(ctx.currentTime + .02, strong); } catch {}
+}
+let ringTimer = null;
+/** Ringtone for incoming calls: plays the chosen style's mention sound, twice, every 2.4 s until stopped. */
+function startRing() { stopRing(); const ring = () => { chime(true); setTimeout(() => ringTimer && chime(true), 700); }; ringTimer = setInterval(ring, 2400); ring(); try { navigator.vibrate?.([300, 200, 300]); } catch {} }
+function stopRing() { if (ringTimer) { clearInterval(ringTimer); ringTimer = null; } }
 function notifyIncoming(m, p) {
   const ment = mentionsMe(m.text), st = S.settings;
   if (S.me.status === 'dnd' && !ment) return;
@@ -1105,7 +1329,7 @@ function notifyIncoming(m, p) {
   if (st.desktop && 'Notification' in window && Notification.permission === 'granted' && (document.hidden || !document.hasFocus())) {
     const u = getUser(p);
     try {
-      const n = new Notification((ment ? '@ ' : '') + (u.displayName || u.username), { body: m.text || (m.attachments?.length ? `Sent ${m.attachments.length > 1 ? m.attachments.length + ' files' : 'a file'}` : ''), tag: 'bc-' + p, icon: 'icons/icon-192.png' });
+      const n = new Notification(isRequest(p) ? `Message request from ${u.displayName || u.username}` : (ment ? '@ ' : '') + (u.displayName || u.username), { body: m.text || (m.attachments?.length ? `Sent ${m.attachments.length > 1 ? m.attachments.length + ' files' : 'a file'}` : ''), tag: 'bc-' + p, icon: 'icons/icon-192.png' });
       n.onclick = () => { window.focus(); openChat(p); n.close(); };
     } catch {}
   }
@@ -1118,6 +1342,7 @@ function previewOf(m) {
   if (!m) return '';
   const who = m.from === S.me.id ? 'You: ' : '';
   if (m.text) return who + m.text.replace(/\|\|.+?\|\|/g, '▒▒▒▒').replace(/(\*\*|~~|`)/g, '').replace(/\s+/g, ' ');
+  if (m.call) return (m.call.status === 'ended' ? (m.call.kind === 'video' ? '🎥 Video call' : '📞 Voice call') : (m.from === S.me.id ? '📞 No answer' : '📞 Missed call'));
   if (m.attachments?.length) return who + '📎 ' + (m.attachments.length > 1 ? m.attachments.length + ' files' : (m.attachments[0].name || 'File'));
   return who;
 }
@@ -1125,6 +1350,10 @@ function renderList() {
   const box = $('#convoList'); if (!box || !S.me) return;
   const q = S.query.trim().toLowerCase().replace(/^@/, '');
   const lastTs = p => { const a = S.msgs.get(p); return a?.length ? a[a.length - 1].ts : 0; };
+  const reqs = requestIds();
+  const rc = $('#reqCount'); if (rc) { rc.hidden = !reqs.length; rc.textContent = reqs.length; }
+  $$('[data-tab-list]').forEach(b => { const on = b.dataset.tabList === (S.tab || 'messages'); b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  if (S.tab === 'requests' && !q) return renderRequests(box, reqs.sort((a, b) => lastTs(b) - lastTs(a)));
   let ids = [...new Set(S.contacts)].filter(id => S.users.has(id));
   ids.sort((a, b) => lastTs(b) - lastTs(a));
   if (q) ids = ids.filter(id => { const u = S.users.get(id); return u.username.includes(q) || (u.displayName || '').toLowerCase().includes(q); });
@@ -1137,8 +1366,8 @@ function renderList() {
       h += `<button class="convo${S.active === id ? ' active' : ''}${un.length ? ' unread' : ''}" data-open="${id}">
         ${avatarHTML(u, 44)}
         <span class="convo-main">
-          <span class="convo-top"><span class="convo-name">${esc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
-          <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : esc(previewOf(last) || (u.customStatus || '@' + u.username))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
+          <span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
+          <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || '@' + u.username))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
         </span></button>`;
     }
   }
@@ -1154,10 +1383,202 @@ function renderList() {
   }
   box.innerHTML = h;
 }
+function renderRequests(box, ids) {
+  if (!ids.length) { box.innerHTML = `<div class="list-empty">No message requests.<br>When someone you haven't added messages you, it shows up here first so you can decide.</div>`; return; }
+  box.innerHTML = `<div class="list-label"><span>Waiting for you</span><span>${ids.length}</span></div>` + ids.map(id => {
+    const u = S.users.get(id), arr = (S.msgs.get(id) || []).filter(m => m.from === id), last = arr[arr.length - 1], un = unreadOf(id);
+    return `<button class="convo${S.active === id ? ' active' : ''}${un.length ? ' unread' : ''}" data-open="${id}">${avatarHTML({ ...u, status: 'offline' }, 44, false)}
+      <span class="convo-main"><span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
+      <span class="convo-bottom"><span class="convo-prev">${emoEsc(previewOf(last) || '')}</span><span class="req-tag">Request</span></span></span></button>`;
+  }).join('');
+}
+function renderRequestBar() {
+  const bar = $('#requestBar'), comp = $('#composer'); if (!bar) return;
+  const req = S.active && isRequest(S.active);
+  bar.hidden = !req; comp.hidden = !!req;
+  if (!req) return;
+  const u = getUser(S.active);
+  bar.innerHTML = `<h4>${emoEsc(u.displayName)} wants to message you</h4><p>They can't see when you're online or that you've read this until you accept. Decline hides it; Block stops them for good.</p>
+    <div class="row"><button class="btn" data-req="accept">${ic('check')}Accept</button><button class="btn ghost" data-req="decline">Decline</button>${S.backend.block ? `<button class="btn ghost" style="color:var(--danger)" data-req="block">Block</button>` : ''}</div>`;
+}
+async function answerRequest(kind) {
+  const id = S.active, u = getUser(id);
+  try {
+    if (kind === 'accept') {
+      const pu = await S.backend.accept(id); if (pu) S.users.set(id, { ...S.users.get(id), ...pu });
+      if (!S.contacts.includes(id)) S.contacts.unshift(id);
+      S.tab = 'messages'; renderAll(); toast(`You can now chat with ${u.displayName}`);
+      if (!isPhone()) $('#input').focus();
+      return;
+    }
+    if (kind === 'block') {
+      if (!(await confirmBox({ title: `Block ${u.displayName}?`, body: 'They will not be able to message you, call you, or find you in search. They are not told.', ok: 'Block' }))) return;
+      S.blocked = await S.backend.block(id, true);
+    }
+    S.declined = await S.backend.decline(id) || { ...S.declined, [id]: Date.now() };
+    closeChat(true); S.active = null; showEmpty(); renderList(); updateTitle();
+    toast(kind === 'block' ? `Blocked ${u.displayName}` : 'Request declined');
+  } catch (e) { toast(e.message, true); }
+}
+/* =========================================================
+   Calls: one-on-one voice and video (WebRTC)
+   The server only introduces the two devices; sound and video
+   travel directly between them, encrypted (DTLS-SRTP), or through
+   the relay when a network blocks a direct path.
+   ========================================================= */
+const Calls = {
+  cur: null, ice: null,
+  available() { return S.backend?.mode === 'server' && !!window.RTCPeerConnection && !!navigator.mediaDevices?.getUserMedia; },
+  async media(kind) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false });
+    } catch (e) {
+      const what = kind === 'video' ? 'camera and microphone' : 'microphone';
+      if (e.name === 'NotAllowedError' || e.name === 'SecurityError') throw new Error(`Allow ${what} access to make calls. Check the permission in your browser or phone settings.`);
+      if (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') throw new Error(`No ${what} was found on this device.`);
+      if (e.name === 'NotReadableError') throw new Error(`Your ${what} is being used by another app. Close it and try again.`);
+      throw new Error(`Could not start your ${what}.`);
+    }
+  },
+  async iceServers() {
+    if (this.ice && Date.now() - this.ice.at < 5 * 60e3) return this.ice.list;
+    let list; try { list = await S.backend.rpc('ice'); } catch { list = [{ urls: 'stun:stun.l.google.com:19302' }]; }
+    this.ice = { at: Date.now(), list }; return list;
+  },
+  async makePC(c) {
+    const pc = new RTCPeerConnection({ iceServers: await this.iceServers() });
+    c.pc = pc; c.pending = [];
+    for (const t of c.local.getTracks()) pc.addTrack(t, c.local);
+    pc.onicecandidate = e => e.candidate && this.signal(c, { cand: e.candidate.toJSON() });
+    pc.ontrack = e => { c.remote = e.streams[0] || new MediaStream([e.track]); const v = $('#callRemote'); if (v && v.srcObject !== c.remote) { v.srcObject = c.remote; v.play?.().catch(() => {}); } this.render(); };
+    pc.onconnectionstatechange = () => {
+      const st = pc.connectionState;
+      if (st === 'connected') { if (!c.connectedAt) c.connectedAt = Date.now(); c.state = 'active'; c.restarted = false; this.render(); }
+      if (st === 'disconnected') { c.note = 'Reconnecting…'; this.render(); }
+      if (st === 'failed') {
+        if (c.caller && !c.restarted) { c.restarted = true; c.note = 'Reconnecting…'; this.render(); this.offer(c, true); }
+        else { toast(S.serverInfo?.calls?.relay === false ? 'The call could not connect. Your server has no call relay set up, so some networks block calls (see DEPLOY.md).' : 'The call could not connect on this network.', true); this.hangup(); }
+      }
+    };
+    return pc;
+  },
+  signal(c, data) { if (S.backend.ws?.readyState === 1) S.backend.ws.send(JSON.stringify({ t: 'call:signal', callId: c.id, data })); },
+  async offer(c, restart) {
+    const o = await c.pc.createOffer(restart ? { iceRestart: true } : {});
+    await c.pc.setLocalDescription(o);
+    this.signal(c, { sdp: c.pc.localDescription.toJSON() });
+  },
+  async start(peer, kind) {
+    if (this.cur) return toast('You are already in a call.', true);
+    if (!this.available()) return toast('Calls need a connection to your server.', true);
+    const u = getUser(peer);
+    const c = this.cur = { peer, kind, caller: true, state: 'outgoing', camOn: kind === 'video', micOn: true };
+    this.render();
+    try {
+      c.local = await this.media(kind);
+      if (this.cur !== c) return this.stop(c);
+      this.render();
+      const r = await S.backend.rpc('call:start', { to: peer, kind });
+      c.id = r.callId;
+      if (this.cur !== c) { S.backend.rpc('call:end', { callId: c.id }).catch(() => {}); return this.stop(c); }
+      await this.makePC(c);
+      c.note = `Ringing ${u.displayName}…`; this.render();
+    } catch (e) { this.stop(c); this.cur = null; this.render(); toast(e.message, true); }
+  },
+  async accept(withVideo) {
+    const c = this.cur; if (!c || c.state !== 'incoming') return;
+    stopRing(); c.state = 'connecting'; c.camOn = !!withVideo; c.note = 'Connecting…'; this.render();
+    try {
+      c.local = await this.media(withVideo ? 'video' : 'audio');
+      await this.makePC(c);
+      await S.backend.rpc('call:accept', { callId: c.id });
+    } catch (e) { toast(e.message, true); S.backend.rpc('call:decline', { callId: c.id }).catch(() => {}); this.stop(c); this.cur = null; this.render(); }
+  },
+  decline() { const c = this.cur; if (!c) return; stopRing(); S.backend.rpc('call:decline', { callId: c.id }).catch(() => {}); this.stop(c); this.cur = null; this.render(); },
+  hangup() { const c = this.cur; if (!c) return; if (c.id) S.backend.rpc('call:end', { callId: c.id }).catch(() => {}); stopRing(); this.stop(c); this.cur = null; this.render(); },
+  stop(c) { try { c.local?.getTracks().forEach(t => t.stop()); } catch {} try { c.pc?.close(); } catch {} clearInterval(c.tick); },
+  toggleMic() { const c = this.cur; if (!c?.local) return; c.micOn = !c.micOn; c.local.getAudioTracks().forEach(t => t.enabled = c.micOn); this.render(); },
+  toggleCam() { const c = this.cur; if (!c?.local) return; const v = c.local.getVideoTracks(); if (!v.length) return; c.camOn = !c.camOn; v.forEach(t => t.enabled = c.camOn); this.render(); },
+  async flip() {
+    const c = this.cur; if (!c?.local?.getVideoTracks().length) return;
+    c.facing = c.facing === 'environment' ? 'user' : 'environment';
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: c.facing } });
+      const nt = s.getVideoTracks()[0], old = c.local.getVideoTracks()[0];
+      const sender = c.pc?.getSenders().find(x => x.track?.kind === 'video'); if (sender) await sender.replaceTrack(nt);
+      c.local.removeTrack(old); old.stop(); c.local.addTrack(nt); this.render();
+    } catch { toast('This device has only one camera.', true); }
+  },
+  async onEvent(e) {
+    const c = this.cur;
+    if (e.t === 'call:incoming') {
+      if (c) return; // already busy (the server normally prevents this)
+      const u = e.user ? (S.users.set(e.from, { ...(S.users.get(e.from) || {}), ...e.user }), S.users.get(e.from)) : getUser(e.from);
+      this.cur = { id: e.callId, peer: e.from, kind: e.kind, caller: false, state: 'incoming', micOn: true, camOn: false };
+      this.render(); startRing();
+      if (S.settings.desktop && 'Notification' in window && Notification.permission === 'granted' && (document.hidden || !document.hasFocus())) {
+        try { const n = new Notification(`${e.kind === 'video' ? 'Video' : 'Voice'} call from ${u.displayName}`, { body: 'Open Bastion Crossroads to answer.', tag: 'bc-call', icon: 'icons/icon-192.png', requireInteraction: true }); n.onclick = () => { window.focus(); n.close(); }; } catch {}
+      }
+      return;
+    }
+    if (!c || e.callId !== c.id) return;
+    if (e.t === 'call:accepted' && c.caller) { c.state = 'connecting'; c.note = 'Connecting…'; this.render(); this.offer(c).catch(() => this.hangup()); }
+    if (e.t === 'call:taken') { stopRing(); this.stop(c); this.cur = null; this.render(); toast('Answered on another device'); }
+    if (e.t === 'call:ended') {
+      stopRing(); this.stop(c); this.cur = null; this.render();
+      const name = getUser(c.peer).displayName;
+      toast(e.reason === 'declined' && c.caller ? `${name} declined the call` : e.reason === 'missed' && c.caller ? `${name} didn't answer` : e.reason === 'missed' ? `Missed call from ${name}` : 'Call ended');
+    }
+    if (e.t === 'call:signal' && c.pc) {
+      const d = e.data;
+      try {
+        if (d.sdp) {
+          await c.pc.setRemoteDescription(d.sdp);
+          if (d.sdp.type === 'offer') { const a = await c.pc.createAnswer(); await c.pc.setLocalDescription(a); this.signal(c, { sdp: c.pc.localDescription.toJSON() }); }
+          for (const cand of c.pending.splice(0)) await c.pc.addIceCandidate(cand).catch(() => {});
+        } else if (d.cand) {
+          if (c.pc.remoteDescription) await c.pc.addIceCandidate(d.cand).catch(() => {}); else c.pending.push(d.cand);
+        }
+      } catch (err) { console.warn('call signal', err); }
+    }
+  },
+  render() {
+    const box = $('#callUI'), c = this.cur;
+    if (!c) { box.hidden = true; box.innerHTML = ''; document.body.classList.remove('in-call'); return; }
+    document.body.classList.add('in-call');
+    const u = getUser(c.peer), video = c.kind === 'video';
+    const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const status = c.state === 'incoming' ? `Incoming ${video ? 'video' : 'voice'} call` : c.state === 'outgoing' ? (c.note || 'Starting…') : c.state === 'active' ? (c.note && c.pc?.connectionState !== 'connected' ? c.note : mmss(Math.round((Date.now() - (c.connectedAt || Date.now())) / 1000))) : (c.note || 'Connecting…');
+    const remoteHasVideo = !!c.remote?.getVideoTracks().some(t => t.readyState === 'live');
+    const showRemote = c.state === 'active' && remoteHasVideo;
+    const btn = (act, icon, label, cls = '') => `<button class="call-btn ${cls}" data-call="${act}" aria-label="${label}" title="${label}">${ic(icon)}<span>${label}</span></button>`;
+    let controls;
+    if (c.state === 'incoming') controls = btn('decline', 'phoneOff', 'Decline', 'end') + (video ? btn('accept', 'phone', 'Voice only', 'ok') + btn('acceptVideo', 'video', 'Video', 'ok') : btn('accept', 'phone', 'Accept', 'ok'));
+    else controls = btn('mic', c.micOn ? 'mic' : 'micOff', c.micOn ? 'Mute' : 'Unmute', c.micOn ? '' : 'off') + (c.local?.getVideoTracks().length ? btn('cam', c.camOn ? 'video' : 'videoOff', c.camOn ? 'Camera off' : 'Camera on', c.camOn ? '' : 'off') + (isPhone() ? btn('flip', 'flip', 'Flip') : '') : '') + btn('hangup', 'phoneOff', c.state === 'outgoing' ? 'Cancel' : 'End', 'end');
+    // keep the <video> elements alive between renders so playback isn't interrupted
+    if (!box.querySelector('.call-stage')) box.innerHTML = `<div class="call-stage"><video id="callRemote" autoplay playsinline></video><div class="call-who"></div><video id="callLocal" autoplay playsinline muted></video></div><div class="call-controls"></div>`;
+    box.hidden = false; box.dataset.state = c.state; box.classList.toggle('has-remote', showRemote);
+    const rv = $('#callRemote', box); if (c.remote && rv.srcObject !== c.remote) { rv.srcObject = c.remote; rv.play?.().catch(() => {}); }
+    rv.hidden = !showRemote;
+    const lv = $('#callLocal', box), hasLocalVideo = !!c.local?.getVideoTracks().length && c.camOn;
+    if (c.local && lv.srcObject !== c.local) lv.srcObject = c.local;
+    lv.hidden = !hasLocalVideo;
+    $('.call-who', box).innerHTML = showRemote ? `<b>${emoEsc(u.displayName)}</b><span>${esc(status)}</span>` : `${avatarHTML({ ...u, status: 'offline' }, 112, false)}<b>${emoEsc(u.displayName)}</b><span>${esc(status)}</span>`;
+    $('.call-controls', box).innerHTML = controls;
+    clearInterval(c.tick); if (c.state === 'active') c.tick = setInterval(() => this.cur === c && this.render(), 1000);
+  }
+};
+function callLogHTML(m) {
+  const mine = m.from === S.me.id, k = m.call || {}, video = k.kind === 'video';
+  const missed = k.status !== 'ended';
+  const label = missed ? (mine ? (k.status === 'declined' ? 'Call declined' : 'No answer') : `Missed ${video ? 'video' : 'voice'} call`) : `${video ? 'Video' : 'Voice'} call`;
+  const dur = !missed && k.duration ? ` · ${Math.floor(k.duration / 60)}:${String(k.duration % 60).padStart(2, '0')}` : '';
+  return `<div class="call-log${missed && !mine ? ' missed' : ''}" data-id="${m.id}">${ic(video ? 'video' : (missed ? 'phoneOff' : 'phone'))}<span><b>${label}</b>${dur} <time>${timeOnly(m.ts)}</time></span>${Calls.available() ? `<button class="btn ghost sm" data-callback="${k.kind || 'audio'}">Call back</button>` : ''}</div>`;
+}
 function renderMe() {
   if (!S.me) return;
   const st = statusOf(S.me);
-  $('#meBtn').innerHTML = `${avatarHTML(S.me, 38)}<span class="who"><b>${esc(S.me.displayName)}</b><span>${esc(S.me.customStatus || STATUS_LABEL[st])}</span></span>`;
+  $('#meBtn').innerHTML = `${avatarHTML(S.me, 38)}<span class="who"><b>${emoEsc(S.me.displayName)}</b><span>${emoEsc(S.me.customStatus || STATUS_LABEL[st])}</span></span>`;
   $('#brandSub').textContent = S.backend?.mode === 'server' ? 'Connected to your server' : 'On this device';
 }
 function setConn(on, msg) { const d = $('#connDot'); if (!d) return; d.hidden = false; d.classList.toggle('off', !on); d.title = on ? 'Connected to server' : (msg || 'Reconnecting to server…'); if (msg) toast(msg, true); }
@@ -1167,8 +1588,10 @@ function setConn(on, msg) { const d = $('#connDot'); if (!d) return; d.hidden = 
    ========================================================= */
 function renderHead() {
   const u = getUser(S.active), st = statusOf(u);
-  $('#headWho').innerHTML = `${avatarHTML(u, 38)}<span class="head-text"><span class="head-name">${esc(u.displayName || u.username)}</span><span class="head-status">${S.typing.has(u.id) ? 'typing…' : esc(u.customStatus || STATUS_LABEL[st])}</span></span>`;
+  $('#headWho').innerHTML = `${avatarHTML(u, 38)}<span class="head-text"><span class="head-name">${emoEsc(u.displayName || u.username)}</span><span class="head-status">${S.typing.has(u.id) ? 'typing…' : emoEsc(u.customStatus || STATUS_LABEL[st])}</span></span>`;
   $('#headWho').setAttribute('aria-label', `View ${u.displayName}'s profile`);
+  const canCall = Calls.available() && S.contacts.includes(u.id) && !isRequest(u.id) && u.acceptedYou !== false;
+  $('#callVoice').hidden = $('#callVideo').hidden = !canCall;
   $('#input').placeholder = `Message ${u.displayName || '@' + u.username}`;
 }
 function fmt(text) {
@@ -1178,7 +1601,9 @@ function fmt(text) {
       if (p.startsWith('```')) return `<pre><code>${esc(p.slice(3, -3).replace(/^[a-z0-9]*\n/i, ''))}</code></pre>`;
       return `<code>${esc(p.slice(1, -1))}</code>`;
     }
-    let h = esc(p);
+    // park :shortcodes: first so markdown (e.g. _italic_) can't break names like :holding_back_tears:
+    const codes = [];
+    let h = esc(p).replace(/:([a-z0-9_]{2,32}):/g, (m, n) => EMO_BY_NAME.has(n) ? `\u0001${codes.push(n) - 1}\u0001` : m);
     h = h.replace(/\|\|(.+?)\|\|/g, '<span class="spoiler" tabindex="0" role="button" aria-label="Spoiler, select to reveal">$1</span>')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/(^|[^*\w])\*(?!\s)([^*\n]+?)\*(?![*\w])/g, '$1<em>$2</em>')
@@ -1189,14 +1614,18 @@ function fmt(text) {
       const u = userByName(name); if (!u) return m;
       return `${pre}<button class="mention${u.id === S.me.id ? ' me' : ''}" data-user="${u.id}">@${esc(u.displayName || u.username)}</button>`;
     });
-    return h;
+    return emoText(h).replace(/\u0001(\d+)\u0001/g, (m, i) => emoji(':' + codes[+i] + ':'));
   }).join('');
 }
 function isJumbo(t) {
-  const s = (t || '').trim(); if (!s || s.length > 48 || /[0-9#*]/.test(s)) return false;
-  if (!/^[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Emoji_Component}‍️\s]+$/u.test(s)) return false;
-  const n = window.Intl?.Segmenter ? [...new Intl.Segmenter().segment(s.replace(/\s/g, ''))].length : s.length / 2;
-  return n <= 6;
+  const s = (t || '').trim(); if (!s || s.length > 120) return false;
+  let n = 0;
+  const rest = s.replace(EMO_RE, () => { n++; return ''; }).replace(/\s+/g, '');
+  if (rest) { // leftover native emoji we have no art for still count, anything else means it's a normal message
+    if (/[0-9#*]/.test(rest) || !/^[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Emoji_Component}\u200d\ufe0f]+$/u.test(rest)) return false;
+    n += window.Intl?.Segmenter ? [...new Intl.Segmenter().segment(rest)].length : rest.length / 2;
+  }
+  return n > 0 && n <= 6;
 }
 const attIndex = new Map();
 function dimStyle(a) {
@@ -1232,7 +1661,7 @@ function reactsHTML(m) {
   if (!ents.length) return '';
   return `<div class="reacts">${ents.map(([e, who]) => {
     const names = who.map(id => getUser(id).displayName || 'Someone').join(', ');
-    return `<button class="react${who.includes(S.me.id) ? ' mine' : ''}" data-act="toggle" data-emoji="${esc(e)}" title="${esc(names)} reacted with ${esc(emojiName(e) ? ':' + emojiName(e) + ':' : e)}" aria-pressed="${who.includes(S.me.id)}">${e}<span>${who.length}</span></button>`;
+    return `<button class="react${who.includes(S.me.id) ? ' mine' : ''}" data-act="toggle" data-emoji="${esc(e)}" title="${esc(names)} reacted with ${esc(emojiName(e) ? ':' + emojiName(e) + ':' : e)}" aria-pressed="${who.includes(S.me.id)}">${emoji(e, 'emj')}<span>${who.length}</span></button>`;
   }).join('')}<button class="react add" data-act="react-more" title="Add reaction" aria-label="Add reaction">${ic('smilePlus')}</button></div>`;
 }
 function replyRefHTML(m) {
@@ -1242,16 +1671,17 @@ function replyRefHTML(m) {
   return `<button class="reply-ref" data-act="jump" data-to="${r.id}">${avatarHTML(u, 16, false)}<b>${esc(u.displayName)}</b><span>${esc(r.text ? r.text.replace(/\s+/g, ' ') : '📎 Attachment')}</span></button>`;
 }
 function msgHTML(m, grouped) {
+  if (m.call) return callLogHTML(m);
   const u = getUser(m.from), mine = m.from === S.me.id, ment = !mine && mentionsMe(m.text);
   let body;
   if (S.editing === m.id) {
     body = `<div class="edit-wrap"><textarea class="inp edit-box" rows="2" aria-label="Edit message">${esc(S.editDraft ?? m.text)}</textarea><div class="hint" style="margin-top:6px">Enter to save, Esc to cancel. <button class="btn sm" data-act="edit-save">Save</button> <button class="btn ghost sm" data-act="edit-cancel">Cancel</button></div></div>`;
   } else body = m.text ? `<div class="msg-text${isJumbo(m.text) ? ' jumbo' : ''}">${fmt(m.text)}${m.editedAt ? `<span class="edited" title="Edited ${esc(timeFull(m.editedAt))}">(edited)</span>` : ''}</div>` : '';
   const atts = m.attachments?.length ? `<div class="atts">${m.attachments.map(attHTML).join('')}</div>` : '';
-  const tools = `<div class="msg-tools" role="toolbar" aria-label="Message actions">${QUICK.slice(0, 3).map(e => `<button class="tool" data-act="toggle" data-emoji="${e}" title="React with ${e}">${e}</button>`).join('')}<button class="tool" data-act="react-more" title="Add reaction" aria-label="Add reaction">${ic('smilePlus')}</button><span class="tool-sep"></span><button class="tool" data-act="reply" title="Reply" aria-label="Reply">${ic('reply')}</button>${mine ? `<button class="tool" data-act="edit" title="Edit" aria-label="Edit">${ic('pencil')}</button><button class="tool danger" data-act="delete" title="Delete" aria-label="Delete">${ic('trash')}</button>` : ''}${m.text ? `<button class="tool" data-act="copy" title="Copy text" aria-label="Copy text">${ic('copy')}</button>` : ''}</div>`;
+  const tools = `<div class="msg-tools" role="toolbar" aria-label="Message actions">${QUICK.slice(0, 3).map(e => `<button class="tool" data-act="toggle" data-emoji="${e}" title="React with :${emojiName(e)}:">${emoji(e)}</button>`).join('')}<button class="tool" data-act="react-more" title="Add reaction" aria-label="Add reaction">${ic('smilePlus')}</button><span class="tool-sep"></span><button class="tool" data-act="reply" title="Reply" aria-label="Reply">${ic('reply')}</button>${mine ? `<button class="tool" data-act="edit" title="Edit" aria-label="Edit">${ic('pencil')}</button><button class="tool danger" data-act="delete" title="Delete" aria-label="Delete">${ic('trash')}</button>` : ''}${m.text ? `<button class="tool" data-act="copy" title="Copy text" aria-label="Copy text">${ic('copy')}</button>` : ''}</div>`;
   return `<article class="msg${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}${ment ? ' mentioned' : ''}" data-id="${m.id}">
     <div class="msg-gutter">${grouped ? `<time>${timeOnly(m.ts)}</time>` : `<button class="av-btn" data-user="${u.id}" aria-label="View ${esc(u.displayName)}'s profile">${avatarHTML(u, 40, false)}</button>`}</div>
-    <div class="msg-body">${m.replyTo ? replyRefHTML(m) : ''}${grouped ? '' : `<div class="msg-head"><button class="msg-author" data-user="${u.id}">${esc(u.displayName || u.username)}</button><time title="${esc(new Date(m.ts).toLocaleString())}">${timeFull(m.ts)}</time></div>`}${body}${atts}${reactsHTML(m)}</div>${tools}</article>`;
+    <div class="msg-body">${m.replyTo ? replyRefHTML(m) : ''}${grouped ? '' : `<div class="msg-head"><button class="msg-author" data-user="${u.id}">${emoEsc(u.displayName || u.username)}</button><time title="${esc(new Date(m.ts).toLocaleString())}">${timeFull(m.ts)}</time></div>`}${body}${atts}${reactsHTML(m)}</div>${tools}</article>`;
 }
 function scrollBottom() { const b = $('#messages'); b.scrollTop = b.scrollHeight; }
 function renderMessages() {
@@ -1262,7 +1692,7 @@ function renderMessages() {
   let prev = null;
   for (const m of arr) {
     if (!prev || dayKey(prev.ts) !== dayKey(m.ts)) { h += `<div class="day" role="separator">${dayLabel(m.ts)}</div>`; prev = null; }
-    const grouped = !!prev && prev.from === m.from && m.ts - prev.ts < 7 * 60e3 && !m.replyTo;
+    const grouped = !!prev && !prev.call && !m.call && prev.from === m.from && m.ts - prev.ts < 7 * 60e3 && !m.replyTo;
     h += msgHTML(m, grouped); prev = m;
   }
   box.innerHTML = h; hydrate(box);
@@ -1275,7 +1705,7 @@ function renderTyping() {
   else el.innerHTML = '';
   if (S.active) renderHead();
 }
-function renderAll() { renderMe(); renderList(); if (S.active) { if (!S.users.has(S.active)) { closeChat(true); S.active = null; showEmpty(); } else { renderHead(); renderMessages(); renderTyping(); } } updateTitle(); }
+function renderAll() { renderMe(); renderList(); if (S.active) { if (!S.users.has(S.active)) { closeChat(true); S.active = null; showEmpty(); } else { renderHead(); renderMessages(); renderTyping(); renderRequestBar(); } } updateTitle(); }
 
 /* ---------- open / close conversation ---------- */
 function showEmpty() { $('#emptyChat').hidden = false; $('#chatView').hidden = true; }
@@ -1286,7 +1716,7 @@ function openChat(id, { fromHistory } = {}) {
   S.active = id; S.stick = true; S.editing = null;
   if (switching) { setReply(null); $('#input').value = S.drafts.get(id) || ''; autosize(); updateSend(); hideAC(); }
   $('#emptyChat').hidden = true; $('#chatView').hidden = false;
-  renderHead(); renderMessages(); renderTyping(); markRead(id); renderList();
+  renderHead(); renderMessages(); renderTyping(); renderRequestBar(); markRead(id); renderList();
   if (isPhone()) {
     if (!chatOpen()) {
       document.body.classList.add('chat-anim');
@@ -1379,8 +1809,8 @@ function checkAC() {
   m = before.match(/(?:^|\s):([a-z0-9_+-]{2,})$/i);
   if (m) {
     const q = m[1].toLowerCase();
-    const res = EMOJI_LIST.filter(e => e.n.includes(q)).sort((a, b) => (b.n.startsWith(q) - a.n.startsWith(q)) || a.n.length - b.n.length).slice(0, 8);
-    if (res.length) return showAC('Emoji matching :' + q, res.map(e => ({ html: `<span class="em">${e.e}</span><span>:${esc(e.n)}:</span>`, insert: e.e + ' ', emoji: e.e })), pos - m[1].length - 1);
+    const res = EMOJI_LIST.filter(e => e.n.includes(q) || e.kw.split(' ').some(w => w.startsWith(q))).sort((a, b) => (b.n.startsWith(q) - a.n.startsWith(q)) || a.n.length - b.n.length).slice(0, 8);
+    if (res.length) return showAC('Emoji matching :' + q, res.map(e => ({ html: `<span class="em">${emoji(e.e)}</span><span>:${esc(e.n)}:</span>`, insert: e.e + ' ', emoji: e.e })), pos - m[1].length - 1);
   }
   hideAC();
 }
@@ -1488,23 +1918,23 @@ function confirmBox({ title, body, ok = 'Confirm', danger = true }) {
 }
 
 /* ---------- emoji picker ---------- */
-const recent = () => ls.get('bc.recentEmoji', ['👍', '❤️', '😂', '🔥', '🎉', '😮', '🙏', '✨']);
+const recent = () => ls.get('bc.recentEmoji', ['👍', '❤️', '😂', '🥹', '🔥', '🎉', '😮', '✨']);
 function addRecent(e) { const r = recent().filter(x => x !== e); r.unshift(e); ls.set('bc.recentEmoji', r.slice(0, 24)); }
 function openEmoji(anchor, onPick, title = 'Emoji') {
   const el = document.createElement('div'); el.className = 'emoji-panel'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
-  const cats = ['Recent', ...Object.keys(EMOJI)];
-  el.innerHTML = `<div class="ep-top"><label class="search">${ic('search')}<input placeholder="Find an emoji" aria-label="Find an emoji" autocomplete="off"></label></div><div class="ep-grid"></div><div class="ep-foot"><span class="big"></span><span class="nm">Pick an emoji. Shift-click to pick several.</span></div><div class="ep-tabs">${cats.map(c => `<button data-cat="${c}" title="${c}" aria-label="${c}">${EMOJI_CAT_ICON[c]}</button>`).join('')}</div>`;
+  const cats = ['Recent', ...EMOJI_CATS];
+  el.innerHTML = `<div class="ep-top"><label class="search">${ic('search')}<input placeholder="Find an emoji" aria-label="Find an emoji" autocomplete="off"></label></div><div class="ep-grid"></div><div class="ep-foot"><span class="big"></span><span class="nm">Pick an emoji. Shift-click to pick several.</span></div><div class="ep-tabs">${cats.map(c => `<button data-cat="${c}" title="${c}" aria-label="${c}">${emoji(EMOJI_CAT_ICON[c] || '⭐', 'emj tab-emj')}</button>`).join('')}</div>`;
   const grid = $('.ep-grid', el), inp = $('input', el);
-  const btn = e => `<button data-e="${e.e}" data-n="${esc(e.n)}" aria-label="${esc(e.n)}">${e.e}</button>`;
+  const btn = e => `<button data-e="${esc(e.e)}" data-n="${esc(e.n)}" aria-label="${esc(e.n.replace(/_/g, ' '))}">${emoji(e.e, 'emj')}</button>`;
   const draw = q => {
     q = (q || '').trim().toLowerCase();
-    if (q) { const r = EMOJI_LIST.filter(e => e.n.includes(q) || e.e === q); grid.innerHTML = r.length ? `<div class="ep-cat">Results</div><div class="ep-items">${r.map(btn).join('')}</div>` : `<div class="ep-none">No emoji match “${esc(q)}”.</div>`; return; }
-    grid.innerHTML = `<div class="ep-cat" data-sec="Recent">Recently used</div><div class="ep-items">${recent().map(e => btn({ e, n: emojiName(e) || e })).join('')}</div>` + Object.entries(EMOJI).map(([c, list]) => `<div class="ep-cat" data-sec="${c}">${c}</div><div class="ep-items">${list.map(btn).join('')}</div>`).join('');
+    if (q) { const r = EMOJI_LIST.filter(e => e.n.includes(q.replace(/^:|:$/g, '')) || e.kw.includes(q) || e.e === q).sort((a, b) => (b.n.startsWith(q) - a.n.startsWith(q))); grid.innerHTML = r.length ? `<div class="ep-cat">Results</div><div class="ep-items">${r.map(btn).join('')}</div>` : `<div class="ep-none">No emoji match “${esc(q)}”.</div>`; return; }
+    grid.innerHTML = `<div class="ep-cat" data-sec="Recent">Recently used</div><div class="ep-items">${recent().filter(k => emojiName(k)).map(k => btn({ e: k, n: emojiName(k) })).join('')}</div>` + EMOJI_CATS.map(c => `<div class="ep-cat" data-sec="${c}">${c === 'Bastion' ? 'Bastion originals' : c}</div><div class="ep-items">${EMOJI_LIST.filter(e => e.c === c).map(btn).join('')}</div>`).join('');
   };
   draw();
   inp.addEventListener('input', () => draw(inp.value));
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const f = $('[data-e]', grid); if (f) f.click(); } });
-  grid.addEventListener('mouseover', e => { const b = e.target.closest('[data-e]'); if (!b) return; $('.big', el).textContent = b.dataset.e; $('.nm', el).textContent = ':' + b.dataset.n + ':'; });
+  grid.addEventListener('mouseover', e => { const b = e.target.closest('[data-e]'); if (!b) return; $('.big', el).innerHTML = emoji(b.dataset.e, 'emj'); $('.nm', el).textContent = ':' + b.dataset.n + ':'; });
   grid.addEventListener('click', e => { const b = e.target.closest('[data-e]'); if (!b) return; addRecent(b.dataset.e); onPick(b.dataset.e); if (!e.shiftKey) Float.close(); });
   $('.ep-tabs', el).addEventListener('click', e => {
     const b = e.target.closest('[data-cat]'); if (!b) return;
@@ -1532,9 +1962,9 @@ function profileCardHTML(u, { preview = false } = {}) {
   return `<div class="pcard-banner" style="${bannerStyle(u)}"></div>
     <div class="pcard-top">${avatarHTML(u, 88)}</div>
     <div class="pcard-body" style="--accent-local:${esc(u.accent || '')}">
-      <div class="pcard-name">${esc(u.displayName || u.username)}</div>
+      <div class="pcard-name">${emoEsc(u.displayName || u.username)}</div>
       <div class="pcard-handle"><span>@${esc(u.username)}</span>${u.pronouns ? `<span class="pill">${esc(u.pronouns)}</span>` : ''}</div>
-      ${u.customStatus ? `<div class="pcard-status">${esc(u.customStatus)}</div>` : ''}
+      ${u.customStatus ? `<div class="pcard-status">${emoEsc(u.customStatus)}</div>` : ''}
       ${u.bio ? `<div class="pcard-sec"><h4>About</h4><p>${fmt(u.bio)}</p></div>` : (isMe && !preview ? `<div class="pcard-sec"><h4>About</h4><p style="color:var(--muted)">Add a bio so people know who they are talking to.</p></div>` : '')}
       ${since ? `<div class="pcard-sec"><h4>Member since</h4><p>${since}</p></div>` : ''}
       ${actions}
@@ -1638,7 +2068,7 @@ async function openViewer(id) {
 function openMsgSheet(id) {
   const m = findMsg(id); if (!m) return; const mine = m.from === S.me.id;
   const el = document.createElement('div'); el.className = 'pop msheet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Message actions');
-  el.innerHTML = `<div class="quick">${QUICK.map(e => `<button data-e="${e}" class="${(m.reactions?.[e] || []).includes(S.me.id) ? 'on' : ''}" aria-label="React ${e}">${e}</button>`).join('')}<button data-more aria-label="More reactions">${ic('smilePlus')}</button></div>
+  el.innerHTML = `<div class="quick">${QUICK.map(e => `<button data-e="${e}" class="${(m.reactions?.[e] || []).includes(S.me.id) ? 'on' : ''}" aria-label="React with ${emojiName(e).replace(/_/g, ' ')}">${emoji(e)}</button>`).join('')}<button data-more aria-label="More reactions">${ic('smilePlus')}</button></div>
     <button class="act" data-a="reply">${ic('reply')}Reply</button>
     ${m.text ? `<button class="act" data-a="copy">${ic('copy')}Copy text</button>` : ''}
     ${mine ? `<button class="act" data-a="edit">${ic('pencil')}Edit message</button><button class="act danger" data-a="delete">${ic('trash')}Delete message</button>` : `<button class="act" data-a="profile">${ic('user')}View profile</button>`}`;
@@ -1746,12 +2176,12 @@ function themeCard(t) {
   const v = t.v, pat = t.pat ? svgUrl(t.pat(v.accent)) : 'none';
   return `<button class="theme-card${S.settings.theme === t.id ? ' on' : ''}" data-theme="${t.id}" aria-pressed="${S.settings.theme === t.id}">
     <div class="tc-prev" style="background:${v.bg}"><div class="tc-side" style="background:${v.panel}"><i style="background:${v.accent};width:70%"></i><i style="background:${v.line}"></i><i style="background:${v.line};width:80%"></i><i style="background:${v.line};width:60%"></i></div>
-    <div class="tc-main"><div class="pat" style="background-image:${pat};opacity:${Math.min(.5, (t.op || .06) * 2.2)}"></div><i style="background:${v.raised};width:70%"></i><i style="background:${v.accent};width:45%;opacity:.85"></i><i style="background:${v.raised};border:1px solid ${v.line};height:16px;border-radius:6px"></i></div></div>
+    <div class="tc-main"><div class="pat" style="background-image:${esc(pat)};opacity:${Math.min(.75, (t.op || .06) * 3)}"></div><i style="background:${v.raised};width:70%"></i><i style="background:${v.accent};width:45%;opacity:.85"></i><i style="background:${v.raised};border:1px solid ${v.line};height:16px;border-radius:6px"></i></div></div>
     <div class="tc-label" style="font-family:${t.ui || 'inherit'}"><span>${t.name}</span>${S.settings.theme === t.id ? ic('check') : ''}</div></button>`;
 }
 function paneAppearance(main) {
   main.innerHTML = `<h2>Appearance</h2><span class="hint">Themes change colors, background patterns and, for some, the typeface. Dark is the default.</span>
-    ${THEME_GROUPS.map(g => `<div class="set-section">${g}</div><div class="themes">${THEMES.filter(t => t.group === g).map(themeCard).join('')}</div>`).join('')}
+    ${THEME_GROUPS.map(g => `<div class="set-section">${g}${g === 'Nightshade' ? ' <span class="hint" style="font-weight:500">· a theme for each plant in the nightshade family</span>' : ''}</div><div class="themes">${THEMES.filter(t => t.group === g).map(themeCard).join('')}</div>`).join('')}
     <div class="set-section">Message text size</div><div class="row"><input type="range" min="13" max="19" step="1" value="${S.settings.fontSize}" id="fsRange" aria-label="Message text size"><span id="fsVal">${S.settings.fontSize}px</span></div>
     <div class="set-section">Message spacing</div><div class="seg" role="group" aria-label="Message spacing"><button data-dens="cozy" class="${S.settings.compact ? '' : 'on'}">Cozy</button><button data-dens="compact" class="${S.settings.compact ? 'on' : ''}">Compact</button></div>`;
   main.onclick = e => {
@@ -1766,11 +2196,16 @@ function toggleRow(key, title, desc) { return `<div class="toggle-row"><div clas
 function paneNotify(main) {
   const perm = 'Notification' in window ? Notification.permission : 'unsupported';
   main.innerHTML = `<h2>Notifications</h2><span class="hint">Choose how Bastion Crossroads gets your attention.</span>
-    ${toggleRow('sound', 'Play a sound for new messages', 'A short chime, with a brighter one when someone mentions you.')}
+    ${toggleRow('sound', 'Play a sound for new messages', 'A brighter, longer version plays when someone mentions you or calls.')}
+    <div class="set-section">Volume</div>
+    <div class="row"><input type="range" min="0" max="100" step="5" value="${S.settings.volume ?? 85}" id="volRange" aria-label="Notification volume"><span id="volVal" style="min-width:44px">${S.settings.volume ?? 85}%</span></div>
+    <div class="set-section">Sound</div>
+    <div class="seg" role="group" aria-label="Notification sound" style="flex-wrap:wrap">${Object.entries(SOUNDS).map(([k, v]) => `<button data-sound="${k}" class="${(S.settings.soundStyle || 'chime') === k ? 'on' : ''}">${v.name}</button>`).join('')}</div>
+    <div class="row" style="margin-top:12px"><button class="btn ghost sm" id="testChime">${ic('bell')}Message sound</button><button class="btn ghost sm" id="testMention">${ic('bell')}Mention and call sound</button></div>
+    <div class="set-section">Alerts</div>
     ${toggleRow('desktop', 'Show system notifications', perm === 'denied' ? 'Notifications are blocked for this site. Allow them in your browser settings first.' : perm === 'unsupported' ? 'This browser does not support system notifications.' : 'Pop up a notification when the app is in the background.')}
     ${toggleRow('mentionsOnly', 'Only notify me for mentions', 'Stay quiet unless someone pings you with @.')}
-    <p class="hint" style="margin-top:18px">Setting your status to Do not disturb also silences everything except mentions.</p>
-    <div style="margin-top:12px"><button class="btn ghost sm" id="testChime">${ic('bell')}Play test sound</button></div>`;
+    <p class="hint" style="margin-top:18px">Setting your status to Do not disturb also silences everything except mentions. Sounds also follow your device's own volume.</p>`;
   main.onchange = async e => {
     const k = e.target.dataset.set; if (!k) return;
     if (k === 'desktop' && e.target.checked) {
@@ -1780,8 +2215,14 @@ function paneNotify(main) {
     }
     S.settings[k] = e.target.checked; saveSettings();
   };
-  main.onclick = e => { if (e.target.closest('#testChime')) chime(true); };
-  main.oninput = null;
+  main.onclick = e => {
+    if (e.target.closest('#testChime')) chime(false);
+    if (e.target.closest('#testMention')) chime(true);
+    const b = e.target.closest('[data-sound]');
+    if (b) { S.settings.soundStyle = b.dataset.sound; saveSettings(); $$('[data-sound]', main).forEach(x => x.classList.toggle('on', x === b)); chime(false); }
+  };
+  main.oninput = e => { if (e.target.id === 'volRange') { S.settings.volume = +e.target.value; $('#volVal', main).textContent = e.target.value + '%'; saveSettings(); } };
+  $('#volRange', main).addEventListener('change', () => chime(false));
 }
 function paneConn(main) {
   const server = S.backend.mode === 'server';
@@ -1982,7 +2423,9 @@ function wire() {
   $('#icSearch').outerHTML = ic('search');
   $('#addBtn').innerHTML = ic('userPlus'); $('#gearBtn').innerHTML = ic('gear');
   $('#emptyAdd').innerHTML = ic('userPlus') + 'Add a person';
-  $('#backBtn').innerHTML = ic('back'); $('#headProfile').innerHTML = ic('user');
+  $('#backBtn').innerHTML = ic('back'); $('#headProfile').innerHTML = ic('user'); $('#callVoice').innerHTML = ic('phone'); $('#callVideo').innerHTML = ic('video');
+  $('#callVoice').onclick = () => Calls.start(S.active, 'audio'); $('#callVideo').onclick = () => Calls.start(S.active, 'video');
+  $('#callUI').addEventListener('click', e => { const b = e.target.closest('[data-call]'); if (!b) return; ({ accept: () => Calls.accept(false), acceptVideo: () => Calls.accept(true), decline: () => Calls.decline(), hangup: () => Calls.hangup(), mic: () => Calls.toggleMic(), cam: () => Calls.toggleCam(), flip: () => Calls.flip() })[b.dataset.call]?.(); });
   $('#attachBtn').innerHTML = ic('clip'); $('#emojiBtn').innerHTML = ic('smile'); $('#sendBtn').innerHTML = ic('send');
 
   $('#addBtn').onclick = () => openAddModal();
@@ -2002,6 +2445,8 @@ function wire() {
   });
   $('#search').addEventListener('keydown', e => { if (e.key === 'Enter') { const f = $('#convoList [data-open]'); if (f) { f.click(); e.target.blur(); } } if (e.key === 'Escape') { e.target.value = ''; S.query = ''; renderList(); } });
 
+  $$('[data-tab-list]').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tabList; renderList(); }));
+  $('#requestBar').addEventListener('click', e => { const b = e.target.closest('[data-req]'); if (b) answerRequest(b.dataset.req); });
   $('#convoList').addEventListener('click', async e => {
     const o = e.target.closest('[data-open]'); if (o) { openChat(o.dataset.open); return; }
     const a = e.target.closest('[data-add]'); if (a) { a.disabled = true; try { await addPerson(a.dataset.add, true); } catch { a.disabled = false; } return; }
@@ -2027,13 +2472,14 @@ function wire() {
   $('#sendBtn').onclick = () => send();
   $('#attachBtn').onclick = () => $('#fileInput').click();
   $('#fileInput').onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
-  $('#emojiBtn').onclick = e => openEmoji(e.currentTarget, em => { insertAtCaret(ta, em); if (!isPhone()) ta.focus(); });
+  $('#emojiBtn').onclick = e => openEmoji(e.currentTarget, em => { insertAtCaret(ta, em.startsWith(':') ? em + ' ' : em); if (!isPhone()) ta.focus(); });
   $('#tray').addEventListener('click', e => { const r = e.target.closest('[data-rm]'); if (!r) return; const i = S.pending.findIndex(p => p.id === r.dataset.rm); if (i >= 0) { const [p] = S.pending.splice(i, 1); if (p.thumb) URL.revokeObjectURL(p.thumb); } renderTray(); updateSend(); });
   $('#replyBar').addEventListener('click', e => { if (e.target.closest('[data-act=cancel-reply]')) setReply(null); });
 
   const box = $('#messages');
   box.addEventListener('scroll', () => { S.stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60; }, { passive: true });
   box.addEventListener('click', e => {
+    const cb = e.target.closest('[data-callback]'); if (cb) { Calls.start(S.active, cb.dataset.callback); return; }
     const sp = e.target.closest('.spoiler'); if (sp) { sp.classList.toggle('open'); return; }
     const u = e.target.closest('[data-user]'); if (u) { showProfile(u.dataset.user, u); return; }
     const el = e.target.closest('[data-act]'); if (!el) return;

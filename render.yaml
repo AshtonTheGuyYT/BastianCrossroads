@@ -32,3 +32,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS         # optional: other websites allowed to use this server
         sync: false
+      - key: METERED_DOMAIN          # call relay, e.g. yourapp.metered.live (from metered.ca)
+        sync: false
+      - key: METERED_API_KEY         # call relay API key (from metered.ca)
+        sync: false

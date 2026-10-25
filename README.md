@@ -7,7 +7,8 @@ One-on-one messaging. Add people by username, DM them, react, mention, share fil
 ```
 bastion-crossroads/
 ├── www/                      The app (this is what gets installed)
-│   ├── index.html            Entire client: HTML, CSS and JS in one file
+│   ├── index.html            The app: HTML, CSS and JS
+│   ├── emoji-art.js          The original emoji art (SVG)
 │   ├── manifest.webmanifest  Makes it installable (PWA)
 │   ├── sw.js                 Service worker: opens offline, caches the app
 │   └── icons/                App icons (any, maskable, Apple touch, SVG)
@@ -70,9 +71,12 @@ After changing anything in `www/`, run `npm run cap:sync`.
 - Replies, edit (↑ for last message), delete, copy, typing indicator, unread badges
 - Formatting: `**bold**`, `*italic*`, `~~strike~~`, `` `code` ``, code blocks, `||spoilers||`, links
 - Files of any type, up to 1 GB each (images and video play inline), drag & drop and paste
-- 14 themes: Bastion (default dark), Daybreak, Sweetheart, High Roller, Gold Vault, Neon Grid, Phosphor, Sunset Drive, Starfall, Abyss, Forge, Rubber Duck, Pizza Night, Cat Café
 - Phones: the chat fills the screen; drag the whole chat to the right to close it and see your list (the back button / system back also works)
-- Sound and system notifications, Do-not-disturb, export conversations
+- Sound and system notifications with a volume slider and five sound styles, Do-not-disturb, export conversations
+- **Message requests:** first messages from people you haven't added wait in a Requests tab (Accept, Decline, Block). They can't see you online until you accept, and can send at most 5 messages before you do.
+- **Voice and video calls** between people who have accepted each other: ringing, mute, camera on/off, flip camera on phones, call history in the chat. Optional free relay (Metered) for networks that block direct calls.
+- **Original emoji:** 249 hand-drawn emoji in one Bastion style (including 🥹 holding back tears) plus a Bastion pack used as `:shortcodes:` (`:lantern:`, `:nightshade:`, `:belladonna:`, `:mandrake:`…). Art lives in `www/emoji-art.js`.
+- **46 themes**, including the Nightshade family (Nightshade, Belladonna, Bittersweet, Mandrake, Moonflower, Henbane, Black Nightshade, Aubergine, Chili Pepper, Lantern Husk, Heirloom Tomato).
 
 ## Notes
 
