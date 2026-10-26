@@ -64,7 +64,7 @@ const sec = require('./security');
 const { createStore, convoKey } = require('./store');
 const { createFiles } = require('./files');
 
-const VERSION = '3.1.0';
+const VERSION = '3.2.0';
 const ENV = process.env;
 const GB = 1024 ** 3;
 const PORT = +ENV.PORT || 8787;
@@ -127,7 +127,15 @@ function saveReadsSoon(uid) { if (readTimers.has(uid)) return; readTimers.set(ui
 function flushReads() { for (const [uid, t] of readTimers) { clearTimeout(t); store.setReads(uid, db.reads[uid]); } readTimers.clear(); }
 const blocked = (owner, other) => (db.blocks[owner] || []).includes(other);
 function indexFiles(m) { for (const a of m.attachments || []) { if (!fileRefs.has(a.id)) fileRefs.set(a.id, new Set()); fileRefs.get(a.id).add(convoKey(m.from, m.to)); } }
-function withFiles(m) { return { ...m, attachments: (m.attachments || []).map(a => { const f = db.files[a.id]; return f ? { id: a.id, name: f.name, size: f.size, type: f.type, w: a.w || null, h: a.h || null } : { id: a.id, name: 'Missing file', size: 0, type: '', w: null, h: null }; }) }; }
+/** Voice messages carry their length and a small waveform (hex digits), checked strictly. */
+function voiceInfo(a, f) {
+  const v = a && a.voice;
+  if (!v || typeof v !== 'object' || !f || !/^audio\//.test(f.type)) return {};
+  const d = Number(v.d);
+  if (!Number.isFinite(d) || d <= 0 || d > 900 || typeof v.w !== 'string' || !/^[0-9a-f]{8,64}$/.test(v.w)) return {};
+  return { voice: { d: Math.round(d * 10) / 10, w: v.w } };
+}
+function withFiles(m) { return { ...m, attachments: (m.attachments || []).map(a => { const f = db.files[a.id]; return f ? { id: a.id, name: f.name, size: f.size, type: f.type, w: a.w || null, h: a.h || null, ...(a.voice ? { voice: a.voice } : {}) } : { id: a.id, name: 'Missing file', size: 0, type: '', w: null, h: null }; }) }; }
 function storageUsed() { let n = 0; for (const f of Object.values(db.files)) n += f.size || 0; return n; }
 function uploadedToday(uid) { const since = Date.now() - 864e5; let n = 0; for (const f of Object.values(db.files)) if (f.owner === uid && f.createdAt > since) n += f.size || 0; return n; }
 function removeFile(id) { if (!db.files[id]) return; delete db.files[id]; fileRefs.delete(id); store.deleteFile(id); files.remove(id); }
@@ -489,7 +497,7 @@ async function handle(ws, me, d) {
         if (pending >= 5) return no(`Wait for @${to.username} to accept your message request before sending more.`);
       }
       const replyTo = typeof d.replyTo === 'string' && (db.convos[key] || []).some(m => m.id === d.replyTo) ? d.replyTo : null;
-      const m = { id: sec.randomId(10), from: me.id, to: to.id, text, ts: Date.now(), reactions: {}, attachments: atts.map(a => ({ id: a.id, w: Number.isInteger(a.w) && a.w > 0 && a.w < 1e5 ? a.w : null, h: Number.isInteger(a.h) && a.h > 0 && a.h < 1e5 ? a.h : null })), replyTo };
+      const m = { id: sec.randomId(10), from: me.id, to: to.id, text, ts: Date.now(), reactions: {}, attachments: atts.map(a => ({ id: a.id, w: Number.isInteger(a.w) && a.w > 0 && a.w < 1e5 ? a.w : null, h: Number.isInteger(a.h) && a.h > 0 && a.h < 1e5 ? a.h : null, ...voiceInfo(a, db.files[a.id]) })), replyTo };
       (db.convos[key] ||= []).push(m); indexFiles(m);
       store.saveMessage(m);
       // The sender adds the recipient. The recipient only adds the sender by accepting the message request.

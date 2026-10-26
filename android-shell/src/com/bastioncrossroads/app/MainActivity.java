@@ -15,6 +15,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
+import android.webkit.MimeTypeMap;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -31,8 +34,13 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Bastion Crossroads for Android.
@@ -77,7 +85,7 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);                   // needed for picked attachments
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setSupportMultipleWindows(false);
-        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.0 Android");
+        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.2 Android");
         CookieManager.getInstance().setAcceptCookie(true);
 
         web.setWebViewClient(new WebViewClient() {
@@ -131,7 +139,19 @@ public class MainActivity extends Activity {
                 fileCallback = callback;
                 Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("*/*");
+                // Respect the page's accept="" (e.g. images only for a profile picture)
+                List<String> types = new ArrayList<String>();
+                String[] acc = params.getAcceptTypes();
+                if (acc != null) for (String a : acc) {
+                    for (String t : a.split(",")) {
+                        t = t.trim().toLowerCase(java.util.Locale.ROOT);
+                        if (t.isEmpty()) continue;
+                        if (t.startsWith(".")) { String m = MimeTypeMap.getSingleton().getMimeTypeFromExtension(t.substring(1)); if (m != null) types.add(m); }
+                        else if (t.contains("/")) types.add(t);
+                    }
+                }
+                if (types.size() == 1) pick.setType(types.get(0));
+                else { pick.setType("*/*"); if (types.size() > 1) pick.putExtra(Intent.EXTRA_MIME_TYPES, types.toArray(new String[0])); }
                 pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
                 try {
                     startActivityForResult(Intent.createChooser(pick, "Attach files"), REQ_FILES);
@@ -160,6 +180,7 @@ public class MainActivity extends Activity {
             }
         });
 
+        cleanPicked(0);
         if (saved != null) web.restoreState(saved);
         else web.loadUrl(SERVER);
     }
@@ -239,8 +260,8 @@ public class MainActivity extends Activity {
 
     private void explainDenied() {
         new AlertDialog.Builder(this)
-            .setTitle("Calls need permission")
-            .setMessage("To make calls, allow Camera and Microphone for Bastion Crossroads in your phone's Settings > Apps.")
+            .setTitle("Microphone and camera needed")
+            .setMessage("For calls and voice messages, allow Camera and Microphone for Bastion Crossroads in your phone's Settings > Apps.")
             .setPositiveButton("Open settings", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface d, int which) {
                     Intent i = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
@@ -255,21 +276,111 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int code, int result, Intent data) {
         if (code == REQ_FILES) {
             if (fileCallback == null) return;
-            Uri[] picked = null;
+            final List<Uri> src = new ArrayList<Uri>();
             if (result == RESULT_OK && data != null) {
                 if (data.getClipData() != null) {
                     int n = data.getClipData().getItemCount();
-                    picked = new Uri[n];
-                    for (int i = 0; i < n; i++) picked[i] = data.getClipData().getItemAt(i).getUri();
+                    for (int i = 0; i < n; i++) src.add(data.getClipData().getItemAt(i).getUri());
                 } else if (data.getData() != null) {
-                    picked = new Uri[] { data.getData() };
+                    src.add(data.getData());
                 }
             }
-            fileCallback.onReceiveValue(picked);
+            if (src.isEmpty()) { fileCallback.onReceiveValue(null); fileCallback = null; return; }
+            final ValueCallback<Uri[]> cb = fileCallback;
             fileCallback = null;
+            copyPicked(src, cb);
             return;
         }
         super.onActivityResult(code, result, data);
+    }
+
+    /**
+     * Copies picked files into the app's private cache, then gives the page the copies.
+     * Copies have an exact size, name and type, which some phone file sources leave out
+     * (that made uploads fail). Runs in the background so big files don't freeze the app.
+     */
+    private void copyPicked(final List<Uri> src, final ValueCallback<Uri[]> cb) {
+        cleanPicked(24L * 3600 * 1000);
+        long total = 0;
+        for (Uri u : src) { long n = sizeOf(u); if (n > 0) total += n; }
+        if (total > 15L * 1024 * 1024) toast(src.size() > 1 ? "Preparing " + src.size() + " files…" : "Preparing file…");
+        new Thread(new Runnable() {
+            public void run() {
+                final List<Uri> out = new ArrayList<Uri>();
+                int failed = 0;
+                for (Uri u : src) {
+                    try { out.add(copyOne(u)); } catch (Exception e) { failed++; }
+                }
+                final int bad = failed;
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (bad > 0) toast(bad == src.size() ? "That file couldn't be opened. Try picking it from the Files app." : bad + " file(s) couldn't be opened and were skipped.");
+                        cb.onReceiveValue(out.isEmpty() ? null : out.toArray(new Uri[0]));
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private Uri copyOne(Uri u) throws Exception {
+        String name = null;
+        Cursor c = null;
+        try {
+            c = getContentResolver().query(u, new String[] { OpenableColumns.DISPLAY_NAME }, null, null, null);
+            if (c != null && c.moveToFirst() && !c.isNull(0)) name = c.getString(0);
+        } catch (Exception ignored) {
+        } finally { if (c != null) c.close(); }
+        if (name == null || name.trim().isEmpty()) name = u.getLastPathSegment();
+        if (name == null || name.trim().isEmpty()) name = "file";
+        name = name.replaceAll("[\\\\/:*?\"<>|\\x00-\\x1f]", "_").trim();
+        if (name.startsWith(".")) name = "file" + name;
+        if (name.length() > 120) name = name.substring(name.length() - 120);
+        // No extension? Add one from the source's type, so the page knows what kind of file it is
+        if (name.lastIndexOf('.') < 1) {
+            String type = getContentResolver().getType(u);
+            String ext = type != null ? MimeTypeMap.getSingleton().getExtensionFromMimeType(type) : null;
+            if (ext != null) name = name + "." + ext;
+        }
+        File dir = new File(PickedFilesProvider.baseDir(this), UUID.randomUUID().toString().replace("-", ""));
+        if (!dir.mkdirs()) throw new Exception("no space");
+        File f = new File(dir, name);
+        InputStream in = getContentResolver().openInputStream(u);
+        if (in == null) throw new Exception("can't open");
+        OutputStream o = new FileOutputStream(f);
+        try {
+            byte[] buf = new byte[256 * 1024];
+            int n;
+            while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+        } finally { in.close(); o.close(); }
+        return PickedFilesProvider.uriFor(f);
+    }
+
+    private long sizeOf(Uri u) {
+        Cursor c = null;
+        try {
+            c = getContentResolver().query(u, new String[] { OpenableColumns.SIZE }, null, null, null);
+            if (c != null && c.moveToFirst() && !c.isNull(0)) return c.getLong(0);
+        } catch (Exception ignored) {
+        } finally { if (c != null) c.close(); }
+        return -1;
+    }
+
+    /** Removes copies older than maxAgeMs (0 = all), so the cache doesn't fill up. */
+    private void cleanPicked(final long maxAgeMs) {
+        final File base = PickedFilesProvider.baseDir(this);
+        new Thread(new Runnable() {
+            public void run() {
+                File[] dirs = base.listFiles();
+                if (dirs == null) return;
+                long now = System.currentTimeMillis();
+                for (File d : dirs) {
+                    if (maxAgeMs > 0 && now - d.lastModified() < maxAgeMs) continue;
+                    File[] kids = d.listFiles();
+                    if (kids != null) for (File k : kids) k.delete();
+                    d.delete();
+                }
+            }
+        }).start();
     }
 
     /** Back closes the open chat (the page handles it like a browser back), then leaves the app. */

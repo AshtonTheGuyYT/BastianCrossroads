@@ -361,6 +361,7 @@ add('📦', 'package', 'box delivery parcel', 'Things', P('M8 20l24-12 24 12v26L
 add('📞', 'telephone', 'call phone ring', 'Things', P('M8 22c0-8 10-12 24-12s24 4 24 12v4c0 2-2 3-4 3h-8c-2 0-3-1-3-3v-3c-6-2-12-2-18 0v3c0 2-1 3-3 3h-8c-2 0-4-1-4-3z', '#F2445A') + P('M18 30h28l6 22H12z', '#F2445A') + C(32, 42, 6, '#fff') + C(32, 42, 2, INK, false));
 add('🎥', 'movie_camera', 'video film record', 'Things', P('M6 22h34v24H6z', '#5B6B80') + P('M40 30l16-8v24l-16-8z', '#3E4A5A') + C(14, 14, 7, '#3E4A5A') + C(30, 14, 7, '#3E4A5A') + C(14, 14, 2.4, '#B9C6D6', false) + C(30, 14, 2.4, '#B9C6D6', false) + C(14, 34, 3, '#F2445A', false));
 add('📎', 'paperclip', 'attach file', 'Things', L('M40 18v24a10 10 0 0 1-20 0V16a7 7 0 0 1 14 0v24a3.6 3.6 0 0 1-7.2 0V20', 4.4, INK) + L('M40 18v24a10 10 0 0 1-20 0V16a7 7 0 0 1 14 0v24a3.6 3.6 0 0 1-7.2 0V20', 2.4, '#B9C6D6'));
+add('🎤', 'microphone', 'mic voice message sing record', 'Things', P('M27 38h10l-1.6 19.5c-.3 2.6-6.5 2.6-6.8 0z', '#3B4352') + P('M22.5 32h19l-2.4 7H24.9z', '#E9B44C') + P('M20 17a12 12 0 0 1 24 0v5a12 12 0 0 1-24 0z', '#9DB0C6') + L('M23 15h18M22 20h20M23 25h18', 1.7, '#62768F') + HL(26, 12, 3.2, 2));
 add('🍒', 'cherries', 'fruit cherry', 'Food', L('M22 40q4-20 22-30M42 40q-2-16 2-30', 2.6, '#4E7D3A') + P('M44 10c6-4 12-2 14 2-6 3-10 2-14-2z', '#4FC27E') + C(20, 44, 11, '#E8304E') + C(42, 44, 11, '#C81E3B') + HL(16, 39, 3, 2) + HL(38, 39, 3, 2));
 add('📌', 'pin', 'location save', 'Things', P('M24 4h16l-2 18 8 10H18l8-10z', '#F2445A') + L('M32 32v28', 3));
 
