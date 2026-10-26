@@ -64,7 +64,7 @@ const sec = require('./security');
 const { createStore, convoKey } = require('./store');
 const { createFiles } = require('./files');
 
-const VERSION = '3.0.1';
+const VERSION = '3.1.0';
 const ENV = process.env;
 const GB = 1024 ** 3;
 const PORT = +ENV.PORT || 8787;

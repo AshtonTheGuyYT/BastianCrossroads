@@ -64,6 +64,7 @@ After changing anything in `www/`, run `npm run cap:sync`.
 ## Features
 
 - 1-on-1 conversations; search people and add them by `@username`
+- Profile picture and banner cropper: drag, zoom (slider, scroll wheel or pinch), rotate, with live previews
 - Profile popup with Settings: display name, username, pronouns, bio, custom status, profile picture, banner image or color, profile color, status (online / idle / do not disturb / invisible)
 - Emoji picker with search and recents, `:shortcode` suggestions while typing
 - `@mentions` with autocomplete, highlighted messages, mention badges and a distinct chime

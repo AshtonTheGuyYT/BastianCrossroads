@@ -390,6 +390,27 @@ body.phone .msg-text.jumbo .emj{width:42px;height:42px}
 .modal-body{padding:8px 20px 20px}
 .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 35%,var(--panel))}
 
+.crop-modal{width:min(520px,100%)}
+.crop-stage{position:relative;overflow:hidden;border-radius:var(--r);background:repeating-conic-gradient(color-mix(in srgb,var(--bg) 70%,#000) 0 25%,color-mix(in srgb,var(--bg) 85%,#222) 0 50%) 0 0/18px 18px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;outline:none;margin:0 auto}
+.crop-stage:focus-visible{box-shadow:0 0 0 2px var(--accent)}
+.crop-stage.dragging{cursor:grabbing}
+.crop-stage img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;transform-origin:center;will-change:transform}
+.crop-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 9999px rgba(5,7,12,.62);border:2px solid rgba(255,255,255,.92);pointer-events:none;border-radius:10px}
+.crop-frame.round{border-radius:50%}
+.crop-frame::before,.crop-frame::after{content:'';position:absolute;inset:0;border:0 solid rgba(255,255,255,.22);border-radius:inherit;opacity:0;transition:opacity .15s}
+.crop-frame::before{border-left-width:1px;border-right-width:1px;left:33.33%;right:33.33%;border-radius:0}
+.crop-frame::after{border-top-width:1px;border-bottom-width:1px;top:33.33%;bottom:33.33%;border-radius:0}
+.crop-stage.dragging .crop-frame::before,.crop-stage.dragging .crop-frame::after{opacity:1}
+.crop-tools{display:flex;align-items:center;gap:8px;margin-top:14px}
+.crop-tools input[type=range]{flex:1;min-width:0}
+.crop-tools .zv{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;width:44px;text-align:right}
+.crop-prev{display:flex;align-items:center;gap:14px;margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:color-mix(in srgb,var(--bg) 35%,var(--panel))}
+.crop-prev canvas{display:block;flex:none;background:var(--raised)}
+.crop-prev .round{border-radius:50%}
+.crop-prev .rect{border-radius:8px;width:100%;max-width:220px;height:auto}
+.crop-prev .hint{margin-left:auto;text-align:right;font-size:12px}
+.crop-note{margin:10px 0 0;font-size:12.5px}
+.img-row{display:flex;flex-wrap:wrap;gap:8px}
 .settings{width:min(980px,100%);height:min(720px,calc(100dvh - 40px));display:grid;grid-template-columns:230px minmax(0,1fr);overflow:hidden;padding:0}
 .set-nav{background:color-mix(in srgb,var(--bg) 40%,var(--panel));border-right:1px solid var(--line);padding:18px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
 .set-nav h3{font-family:var(--font-display);font-weight:600;font-size:21px;margin:2px 10px 14px}
@@ -634,6 +655,11 @@ const ls = {
 
 /* ---------- icons ---------- */
 const ICONS = {
+  rotate: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
   search: '<circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.6-4.6"/>',
   userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
   gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
@@ -2140,9 +2166,9 @@ function paneProfile(main) {
   main.innerHTML = `<h2>My profile</h2><span class="hint">This is how other people see you around the crossroads.</span>
   <div class="prof-grid"><div>
     <div class="set-section" style="margin-top:0">Profile picture</div>
-    <div class="img-row"><label class="btn ghost sm">${ic('image')}Upload picture<input type="file" accept="image/*" hidden data-img="avatar"></label>${d.avatar ? `<button class="btn ghost sm" data-clear="avatar">Remove picture</button>` : ''}</div>
+    <div class="img-row"><label class="btn ghost sm">${ic('image')}Upload picture<input type="file" accept="image/*" hidden data-img="avatar"></label>${d.avatar ? `<button class="btn ghost sm" data-adjust="avatar">${ic('crop')}Crop &amp; zoom</button><button class="btn ghost sm" data-clear="avatar">Remove picture</button>` : ''}</div>
     <div class="set-section">Banner</div>
-    <div class="row"><label class="btn ghost sm">${ic('image')}Upload banner<input type="file" accept="image/*" hidden data-img="banner"></label>${d.banner ? `<button class="btn ghost sm" data-clear="banner">Remove banner</button>` : ''}<label class="row" style="gap:8px"><input type="color" class="color-inp" data-f="bannerColor" value="${esc(d.bannerColor || '#3A4658')}" aria-label="Banner color"><span class="hint">Banner color</span></label></div>
+    <div class="row"><label class="btn ghost sm">${ic('image')}Upload banner<input type="file" accept="image/*" hidden data-img="banner"></label>${d.banner ? `<button class="btn ghost sm" data-adjust="banner">${ic('crop')}Crop &amp; zoom</button><button class="btn ghost sm" data-clear="banner">Remove banner</button>` : ''}<label class="row" style="gap:8px"><input type="color" class="color-inp" data-f="bannerColor" value="${esc(d.bannerColor || '#3A4658')}" aria-label="Banner color"><span class="hint">Banner color</span></label></div>
     <div class="set-section">About you</div>
     <div class="field"><label for="pfName">Display name</label><input class="inp" id="pfName" data-f="displayName" maxlength="32" value="${esc(d.displayName)}"></div>
     <div class="field"><label for="pfUser">Username</label><div class="at-inp"><span>@</span><input class="inp" id="pfUser" data-f="username" maxlength="24" value="${esc(d.username)}" ${server ? 'disabled' : ''} autocapitalize="none" spellcheck="false"></div><span class="hint">${server ? 'Usernames are fixed on this server.' : 'Lowercase letters, numbers, dots and underscores.'}</span></div>
@@ -2168,11 +2194,27 @@ function paneProfile(main) {
     const k = e.target.dataset.img; if (!k || !e.target.files[0]) return;
     const file = e.target.files[0];
     if (!file.type.startsWith('image/')) return toast('Choose an image file for your ' + (k === 'avatar' ? 'picture' : 'banner') + '.', true);
-    try { SET.draft[k] = await processImage(file, k); dirty(); paneProfile(main); } catch (err) { toast(err.message, true); }
+    e.target.value = ''; // so picking the same file again still opens the cropper
+    try {
+      const src = await loadCropSource(file);
+      const out = await openCropper(src, k);
+      if (out) { (SET.src ||= {})[k] = src; SET.draft[k] = out.url; SET.cropState = { ...(SET.cropState || {}), [k]: out.state }; dirty(); paneProfile(main); }
+    } catch (err) { toast(err.message, true); }
   };
   main.onclick = async e => {
-    const c = e.target.closest('[data-clear]'); if (c) { SET.draft[c.dataset.clear] = null; dirty(); paneProfile(main); return; }
-    if (e.target.closest('[data-reset]')) { SET.draft = { ...S.me }; SET.dirty = false; paneProfile(main); return; }
+    const c = e.target.closest('[data-clear]'); if (c) { SET.draft[c.dataset.clear] = null; if (SET.src) delete SET.src[c.dataset.clear]; dirty(); paneProfile(main); return; }
+    const adj = e.target.closest('[data-adjust]');
+    if (adj) {
+      // Re-crop from the original upload when we still have it (sharper), otherwise from the current picture
+      const k = adj.dataset.adjust, orig = SET.src?.[k];
+      try {
+        const src = orig || await loadCropSource(SET.draft[k]);
+        const out = await openCropper(src, k, orig ? SET.cropState?.[k] : null);
+        if (out) { SET.draft[k] = out.url; SET.cropState = { ...(SET.cropState || {}), [k]: out.state }; dirty(); paneProfile(main); }
+      } catch (err) { toast(err.message, true); }
+      return;
+    }
+    if (e.target.closest('[data-reset]')) { SET.draft = { ...S.me }; SET.dirty = false; SET.src = null; SET.cropState = null; paneProfile(main); return; }
     if (e.target.closest('[data-save]')) {
       const d = SET.draft; const err = $('#pfErr', main);
       if (!d.displayName.trim()) { err.textContent = 'Enter a display name.'; return; }
@@ -2186,19 +2228,141 @@ function paneProfile(main) {
     }
   };
 }
-async function processImage(file, kind) {
-  if (file.size > MAX_FILE) throw new Error('That image is over 1 GB.');
-  if (file.type === 'image/gif' && file.size < 2.5 * 1024 * 1024) return await new Promise((r, j) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => j(new Error('Could not read that image.')); fr.readAsDataURL(file); });
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => j(new Error('That image could not be opened. Try a PNG or JPG.')); i.src = url; });
-    const [W, H] = kind === 'avatar' ? [320, 320] : [1200, 420];
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-    const s = Math.max(W / img.naturalWidth, H / img.naturalHeight), w = img.naturalWidth * s, h = img.naturalHeight * s;
-    x.imageSmoothingQuality = 'high'; x.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-    let out = c.toDataURL('image/webp', .86); if (!out.startsWith('data:image/webp')) out = c.toDataURL('image/jpeg', .86);
-    return out;
-  } finally { URL.revokeObjectURL(url); }
+/* ---------- picture cropper: drag to move, zoom with the slider, wheel or pinch ---------- */
+const CROP = { avatar: { W: 512, H: 512, max: 1024 * 1024, round: true, title: 'Crop your profile picture' }, banner: { W: 1200, H: 420, max: 2 * 1024 * 1024, round: false, title: 'Crop your banner' } };
+async function loadCropSource(fileOrUrl) {
+  const isFile = typeof fileOrUrl !== 'string';
+  if (isFile) {
+    if (fileOrUrl.size > MAX_FILE) throw new Error('That image is over 1 GB.');
+    if (fileOrUrl.type && !fileOrUrl.type.startsWith('image/')) throw new Error('Choose an image file.');
+  }
+  const url = isFile ? URL.createObjectURL(fileOrUrl) : fileOrUrl;
+  const img = await new Promise((r, j) => { const i = new Image(); i.decoding = 'async'; i.onload = () => r(i); i.onerror = () => j(new Error('That image could not be opened. Try a PNG or JPG.')); i.src = url; });
+  if (!img.naturalWidth || !img.naturalHeight) throw new Error('That image is empty.');
+  return { img, url, file: isFile ? fileOrUrl : null, gif: isFile ? fileOrUrl.type === 'image/gif' : /^data:image\/gif/.test(url) };
+}
+const readDataURL = f => new Promise((r, j) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => j(new Error('Could not read that image.')); fr.readAsDataURL(f); });
+/** Opens the cropper. Resolves { url, state } with the finished picture, or null if cancelled. */
+function openCropper(src, kind, prevState) {
+  const cfg = CROP[kind], img = src.img, NW = img.naturalWidth, NH = img.naturalHeight, AR = cfg.W / cfg.H;
+  const canKeepGif = src.gif && src.file && src.file.size <= cfg.max;
+  return new Promise(resolve => {
+    let done = null;
+    const m = Modal.open(`<div class="modal-head"><h3>${cfg.title}</h3><button class="icon-btn" data-x aria-label="Close">${ic('x')}</button></div>
+      <div class="modal-body">
+        <div class="crop-stage" tabindex="0" role="application" aria-label="Picture position. Drag or use the arrow keys to move it, plus and minus to zoom."><img alt="" draggable="false"><div class="crop-frame${cfg.round ? ' round' : ''}"></div></div>
+        <div class="crop-tools">
+          <button class="icon-btn" data-z="-1" aria-label="Zoom out" title="Zoom out">${ic('minus')}</button>
+          <input type="range" min="1" max="6" step="0.01" value="1" aria-label="Zoom">
+          <button class="icon-btn" data-z="1" aria-label="Zoom in" title="Zoom in">${ic('plus')}</button>
+          <span class="zv">100%</span>
+          <button class="icon-btn" data-rot aria-label="Rotate" title="Rotate 90°">${ic('rotate')}</button>
+          <button class="icon-btn" data-reset-crop aria-label="Reset" title="Reset">${ic('undo')}</button>
+        </div>
+        <div class="crop-prev">${cfg.round ? '<canvas class="round" width="176" height="176" style="width:88px;height:88px"></canvas><canvas class="round" width="76" height="76" style="width:38px;height:38px"></canvas>' : '<canvas class="rect" width="440" height="154"></canvas>'}<span class="hint">Drag to move<br>Scroll or pinch to zoom</span></div>
+        ${src.gif ? `<p class="hint crop-note">Cropping turns an animated GIF into a still picture.${canKeepGif ? ' Use “Keep animation” to upload it uncropped instead.' : ''}</p>` : ''}
+      </div>
+      <div class="modal-foot">${canKeepGif ? '<button class="btn ghost" data-keep style="margin-right:auto">Keep animation</button>' : ''}<button class="btn ghost" data-cancel>Cancel</button><button class="btn" data-apply>${ic('check')}Apply</button></div>`,
+      { cls: 'crop-modal', label: cfg.title, onClose: () => { removeEventListener('resize', onResize); resolve(done); } });
+    const stage = $('.crop-stage', m), frame = $('.crop-frame', m), pic = $('img', stage), range = $('input[type=range]', m), zv = $('.zv', m), prevs = $$('.crop-prev canvas', m);
+    pic.src = src.url;
+    // state: zoom z (1 = just covers the frame), rotation in quarter turns, and the picture's centre offset as a fraction of the frame
+    let z = 1, rot = 0, fx = 0, fy = 0, FW = 0, FH = 0, PAD = 0;
+    if (prevState) ({ z, rot, fx, fy } = prevState);
+    const dims = () => rot % 2 ? [NH, NW] : [NW, NH];
+    const scale = () => { const [iw, ih] = dims(); return Math.max(FW / iw, FH / ih) * z; };
+    function layout() {
+      const pe = stage.parentElement, cs = getComputedStyle(pe), avail = Math.min((pe.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) || 420, 480);
+      PAD = Math.max(14, Math.round(avail * .06));
+      FW = Math.round(avail - PAD * 2); FH = Math.round(FW / AR);
+      if (cfg.round) { FW = FH = Math.min(FW, Math.round(Math.min(innerHeight * .42, 340))); }
+      const SW = cfg.round ? FW + PAD * 2 : avail, SH = FH + PAD * 2;
+      stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
+      frame.style.width = FW + 'px'; frame.style.height = FH + 'px';
+    }
+    function clamp() {
+      z = Math.min(6, Math.max(1, z));
+      const [iw, ih] = dims(), k = scale();
+      const mx = Math.max(0, (iw * k - FW) / 2) / FW, my = Math.max(0, (ih * k - FH) / 2) / FH;
+      fx = Math.min(mx, Math.max(-mx, fx)); fy = Math.min(my, Math.max(-my, fy));
+    }
+    let raf = 0;
+    function render() {
+      clamp();
+      const k = scale();
+      pic.style.width = NW * k + 'px'; pic.style.height = NH * k + 'px';
+      pic.style.transform = `translate(calc(-50% + ${fx * FW}px), calc(-50% + ${fy * FH}px)) rotate(${rot * 90}deg)`;
+      range.value = z; zv.textContent = Math.round(z * 100) + '%';
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(() => prevs.forEach(c => draw(c, c.width, c.height)));
+    }
+    /** Paints exactly what's inside the frame onto a canvas of any size. */
+    function draw(c, W, H) {
+      const x = c.getContext('2d'), r = W / FW, k = scale() * r;
+      x.clearRect(0, 0, W, H); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.save(); x.translate(W / 2 + fx * FW * r, H / 2 + fy * FH * r); x.rotate(rot * Math.PI / 2);
+      x.drawImage(img, -NW * k / 2, -NH * k / 2, NW * k, NH * k); x.restore();
+    }
+    /** Zoom so the point under (px, py), measured from the frame centre in screen pixels, stays put. */
+    function zoomTo(nz, px = 0, py = 0) {
+      const k1 = scale(); z = Math.min(6, Math.max(1, nz)); const k2 = scale(), f = k2 / k1;
+      fx = (px - (px - fx * FW) * f) / FW; fy = (py - (py - fy * FH) * f) / FH; render();
+    }
+    const rel = e => { const b = frame.getBoundingClientRect(); return [e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2)]; };
+    // dragging and pinching
+    const pts = new Map(); let last = null;
+    const pinch = () => { const [a, b] = [...pts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    stage.addEventListener('pointerdown', e => {
+      if (e.button > 0) return;
+      stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      stage.classList.add('dragging'); last = pts.size === 2 ? pinch() : null; e.preventDefault();
+    });
+    stage.addEventListener('pointermove', e => {
+      const p = pts.get(e.pointerId); if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+      if (pts.size === 1) { fx += dx / FW; fy += dy / FH; render(); }
+      else if (pts.size === 2) {
+        const now = pinch();
+        if (last) { const [px, py] = rel({ clientX: now.x, clientY: now.y }); fx += (now.x - last.x) / FW; fy += (now.y - last.y) / FH; zoomTo(z * now.d / (last.d || now.d), px, py); }
+        last = now;
+      }
+    });
+    const up = e => { pts.delete(e.pointerId); last = pts.size === 2 ? pinch() : null; if (!pts.size) stage.classList.remove('dragging'); };
+    stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+    stage.addEventListener('wheel', e => { e.preventDefault(); const [px, py] = rel(e); zoomTo(z * Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0018)), px, py); }, { passive: false });
+    stage.addEventListener('dblclick', e => { const [px, py] = rel(e); zoomTo(z < 2 ? z * 2 : 1, px, py); });
+    stage.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 40 : 8, mv = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (mv) { e.preventDefault(); fx += mv[0] / FW; fy += mv[1] / FH; render(); }
+      else if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomTo(z * 1.15); }
+      else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomTo(z / 1.15); }
+      else if (e.key === 'Enter') { e.preventDefault(); apply(); }
+    });
+    range.addEventListener('input', () => zoomTo(+range.value));
+    m.addEventListener('click', e => {
+      const t = e.target.closest('button'); if (!t) return;
+      if (t.dataset.z) zoomTo(z * (t.dataset.z > 0 ? 1.25 : 0.8));
+      else if (t.hasAttribute('data-rot')) { rot = (rot + 1) % 4; [fx, fy] = [-fy * FH / FW, fx * FW / FH]; render(); }
+      else if (t.hasAttribute('data-reset-crop')) { z = 1; rot = 0; fx = fy = 0; render(); }
+      else if (t.hasAttribute('data-x') || t.hasAttribute('data-cancel')) Modal.close();
+      else if (t.hasAttribute('data-apply')) apply();
+      else if (t.hasAttribute('data-keep')) keepGif(t);
+    });
+    async function keepGif(b) { b.disabled = true; try { done = { url: await readDataURL(src.file), state: null }; Modal.close(); } catch (err) { toast(err.message, true); b.disabled = false; } }
+    function apply() {
+      const c = document.createElement('canvas'); c.width = cfg.W; c.height = cfg.H; draw(c, cfg.W, cfg.H);
+      let url = '';
+      for (const q of [.88, .8, .7, .6, .5]) { // shrink until it fits the server's size limit
+        url = c.toDataURL('image/webp', q); if (!url.startsWith('data:image/webp')) url = c.toDataURL('image/jpeg', q);
+        if (url.length * .75 <= cfg.max) break;
+      }
+      if (url.length * .75 > cfg.max) return toast('That picture is too detailed to fit. Try zooming in a little.', true);
+      done = { url, state: { z, rot, fx, fy } }; Modal.close();
+    }
+    const onResize = () => { layout(); render(); };
+    addEventListener('resize', onResize);
+    layout(); render();
+    setTimeout(() => stage.focus({ preventScroll: true }), 50);
+  });
 }
 function themeCard(t) {
   const v = t.v, pat = t.pat ? svgUrl(t.pat(v.accent)) : 'none';
