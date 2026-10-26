@@ -1067,7 +1067,7 @@ class ServerBackend {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.t === 'hello') {
         helloed = true; this.retry = 0; setConn(true);
-        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
+        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
         if (onHello) { const f = onHello; onHello = null; onFail = null; f(data); } else emit({ t: 'resync', data });
         return;
       }
@@ -1127,6 +1127,17 @@ class ServerBackend {
   accept(id) { return this.rpc('accept', { id }); }
   decline(id) { return this.rpc('decline', { id }); }
   logoutAll() { return this.rpc('logoutAll'); }
+  /** Read markers are batched so scrolling through chats sends one small update, not dozens. */
+  markRead(marks) {
+    this.readQ = Object.assign(this.readQ || {}, marks);
+    clearTimeout(this.readT);
+    this.readT = setTimeout(() => this.flushReads(), 400);
+  }
+  flushReads() {
+    const marks = this.readQ; if (!marks || !Object.keys(marks).length) return;
+    this.readQ = null;
+    this.rpc('read', { marks }).catch(() => { this.readQ = Object.assign(marks, this.readQ || {}); clearTimeout(this.readT); this.readT = setTimeout(() => this.flushReads(), 5000); });
+  }
   typing(peer) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t: 'typing', to: peer })); }
   /** File links are private and expire, so they're fetched from the server in batches and refreshed when old. */
   fileURL(att) {
@@ -1208,7 +1219,13 @@ function loadSnapshot(d) {
   S.msgs = new Map();
   for (const m of d.messages || []) { const p = peerOf(m); if (!S.msgs.has(p)) S.msgs.set(p, []); S.msgs.get(p).push(m); }
   for (const arr of S.msgs.values()) arr.sort((a, b) => a.ts - b.ts);
-  S.lastRead = ls.get('bc.read.' + S.me.id, {});
+  // What you've read lives on the server too, so every device agrees. Take the newest of both,
+  // and send anything this device read that the server doesn't know about yet.
+  const local = ls.get('bc.read.' + S.me.id, {}), remote = d.reads || {}, push = {};
+  S.lastRead = { ...remote };
+  for (const [p, ts] of Object.entries(local)) if (ts > (S.lastRead[p] || 0)) { S.lastRead[p] = ts; if (S.msgs.has(p)) push[p] = Math.min(ts, latestTs(p) || ts); }
+  ls.set('bc.read.' + S.me.id, S.lastRead);
+  if (Object.keys(push).length) S.backend?.markRead?.(push);
   S.blocked = d.blocked || [];
   S.declined = d.declined || {};
 }
@@ -1258,6 +1275,12 @@ function onEvent(e) {
       renderTyping(); renderList();
       break;
     }
+    case 'read': { // you read something on another device
+      let any = false;
+      for (const [p, ts] of Object.entries(e.marks || {})) if (ts > (S.lastRead[p] || 0)) { S.lastRead[p] = ts; any = true; }
+      if (any) { ls.set('bc.read.' + S.me.id, S.lastRead); renderList(); updateTitle(); }
+      break;
+    }
     case 'error': toast(e.error || 'Something went wrong on the server.', true); break;
     case 'call:incoming': case 'call:accepted': case 'call:signal': case 'call:ended': case 'call:taken': Calls.onEvent(e); break;
   }
@@ -1272,9 +1295,14 @@ function isRequest(p) {
 }
 const requestIds = () => [...S.msgs.keys()].filter(isRequest);
 function unreadOf(p) { const lr = S.lastRead[p] || 0; return (S.msgs.get(p) || []).filter(m => m.from !== S.me.id && m.ts > lr); }
+function latestTs(p) { const arr = S.msgs.get(p) || []; return arr.length ? arr[arr.length - 1].ts : 0; }
 function markRead(p) {
-  const arr = S.msgs.get(p) || []; const last = arr.length ? arr[arr.length - 1].ts : 0;
-  S.lastRead[p] = Math.max(Date.now(), last); ls.set('bc.read.' + S.me.id, S.lastRead); updateTitle();
+  const last = latestTs(p);
+  // Online, use the server's own message time so a phone with a wrong clock can't hide new messages
+  const ts = S.backend?.mode === 'server' ? last : Math.max(Date.now(), last);
+  if (!ts || ts <= (S.lastRead[p] || 0)) { updateTitle(); return; }
+  S.lastRead[p] = ts; ls.set('bc.read.' + S.me.id, S.lastRead); updateTitle();
+  S.backend?.markRead?.({ [p]: ts });
 }
 function updateTitle() {
   const n = [...S.contacts, ...requestIds()].reduce((a, p) => a + unreadOf(p).length, 0);

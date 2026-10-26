@@ -1,0 +1,9 @@
+{
+  "name": "bastion-crossroads",
+  "productName": "Bastion Crossroads",
+  "version": "3.0.0",
+  "description": "Bastion Crossroads desktop app",
+  "main": "main.js",
+  "author": "Bastion Crossroads",
+  "license": "UNLICENSED"
+}

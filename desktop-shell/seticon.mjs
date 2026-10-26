@@ -1,0 +1,20 @@
+// Sets the Bastion Crossroads icon and version details on the Windows .exe (pure JavaScript, no Wine needed)
+import * as ResEdit from 'resedit';
+import * as PELibrary from 'pe-library';
+import fs from 'fs';
+const exe = process.argv[2], ico = process.argv[3];
+const pe = PELibrary.NtExecutable.from(fs.readFileSync(exe), { ignoreCert: true });
+const res = PELibrary.NtExecutableResource.from(pe);
+const iconFile = ResEdit.Data.IconFile.from(fs.readFileSync(ico));
+const groups = ResEdit.Resource.IconGroupEntry.fromEntries(res.entries);
+const gid = groups.length ? groups[0].id : 1, lang = groups.length ? groups[0].lang : 1033;
+ResEdit.Resource.IconGroupEntry.replaceIconsForResource(res.entries, gid, lang, iconFile.icons.map(i => i.data));
+const vi = ResEdit.Resource.VersionInfo.fromEntries(res.entries)[0];
+const langs = vi.getAllLanguagesForStringValues();
+const L = langs[0] || { lang: 1033, codepage: 1200 };
+vi.setStringValues(L, { CompanyName: 'Bastion Crossroads', FileDescription: 'Bastion Crossroads', ProductName: 'Bastion Crossroads', InternalName: 'Bastion Crossroads', OriginalFilename: 'Bastion Crossroads.exe', LegalCopyright: 'Bastion Crossroads', ProductVersion: '3.0.0', FileVersion: '3.0.0' });
+vi.setFileVersion(3, 0, 0, 0, L.lang); vi.setProductVersion(3, 0, 0, 0, L.lang);
+vi.outputToResourceEntries(res.entries);
+res.outputResource(pe);
+fs.writeFileSync(exe, Buffer.from(pe.generate()));
+console.log('icons in group', gid, '->', iconFile.icons.length, 'sizes; version info set');

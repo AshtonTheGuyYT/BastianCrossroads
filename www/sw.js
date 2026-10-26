@@ -1,5 +1,5 @@
 /* Bastion Crossroads service worker: makes the app installable and open offline. */
-const CACHE = 'bastion-crossroads-v3';
+const CACHE = 'bastion-crossroads-v3-1';
 const SHELL = ['./', './index.html', './emoji-art.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

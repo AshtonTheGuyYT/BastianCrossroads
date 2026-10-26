@@ -64,7 +64,7 @@ const sec = require('./security');
 const { createStore, convoKey } = require('./store');
 const { createFiles } = require('./files');
 
-const VERSION = '3.0.0';
+const VERSION = '3.0.1';
 const ENV = process.env;
 const GB = 1024 ** 3;
 const PORT = +ENV.PORT || 8787;
@@ -122,6 +122,9 @@ function watchers(uid) {
 }
 function broadcastUser(u) { for (const w of watchers(u.id)) if (online(w)) sendTo(w, { t: 'user', user: pub(u, w) }); sendTo(u.id, { t: 'user', user: self(u) }); }
 function addContact(owner, other) { const l = (db.contacts[owner] ||= []); if (l.includes(other)) return false; l.unshift(other); if (l.length > 1000) l.length = 1000; store.setContacts(owner, l); return true; }
+const readTimers = new Map();
+function saveReadsSoon(uid) { if (readTimers.has(uid)) return; readTimers.set(uid, setTimeout(() => { readTimers.delete(uid); store.setReads(uid, db.reads[uid]); }, 1500)); }
+function flushReads() { for (const [uid, t] of readTimers) { clearTimeout(t); store.setReads(uid, db.reads[uid]); } readTimers.clear(); }
 const blocked = (owner, other) => (db.blocks[owner] || []).includes(other);
 function indexFiles(m) { for (const a of m.attachments || []) { if (!fileRefs.has(a.id)) fileRefs.set(a.id, new Set()); fileRefs.get(a.id).add(convoKey(m.from, m.to)); } }
 function withFiles(m) { return { ...m, attachments: (m.attachments || []).map(a => { const f = db.files[a.id]; return f ? { id: a.id, name: f.name, size: f.size, type: f.type, w: a.w || null, h: a.h || null } : { id: a.id, name: 'Missing file', size: 0, type: '', w: null, h: null }; }) }; }
@@ -372,7 +375,7 @@ server.on('upgrade', (req, socket, head) => {
 wss.on('connection', (ws, req, ip) => {
   ws.ip = ip; ipConns.set(ip, (ipConns.get(ip) || 0) + 1);
   ws.isAlive = true; ws.on('pong', () => ws.isAlive = true);
-  ws.flood = new sec.Bucket(20, 60); ws.sendB = new sec.Bucket(5, 15); ws.misc = new sec.Bucket(3, 10); ws.signal = new sec.Bucket(60, 300); ws.strikes = 0;
+  ws.flood = new sec.Bucket(20, 60); ws.sendB = new sec.Bucket(5, 15); ws.misc = new sec.Bucket(3, 10); ws.readB = new sec.Bucket(4, 30); ws.signal = new sec.Bucket(60, 300); ws.strikes = 0;
   // The token arrives in the first message, never in the URL (URLs end up in logs).
   const authTimer = setTimeout(() => ws.close(4001, 'auth timeout'), 10e3);
   ws.on('message', async (raw, isBinary) => {
@@ -418,7 +421,7 @@ function onAuthed(ws, s) {
     const peer = a === me.id ? b : a; people.add(peer);
     convos[peer] = list.slice(-HISTORY_SENT).map(withFiles);
   }
-  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
+  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, reads: db.reads[me.id] || {}, limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
   if (!wasOnline) broadcastUser(me);
 }
 const reply = (ws, rid, ok, data) => ws.readyState === 1 && rid && ws.send(JSON.stringify({ t: 'res', rid, ok, ...(ok ? { data } : { error: data }) }));
@@ -525,6 +528,22 @@ async function handle(ws, me, d) {
       if (db.declined[me.id]?.[u.id]) { delete db.declined[me.id][u.id]; store.setDeclined(me.id, db.declined[me.id]); }
       sendTo(u.id, { t: 'user', user: pub(me, u.id) }); // they can now see you online
       return ok(pub(u, me.id));
+    }
+    case 'read': {
+      // Read markers are kept on the server so every device agrees on what you've already seen
+      if (!ws.readB.take()) return;
+      const marks = d.marks && typeof d.marks === 'object' && !Array.isArray(d.marks) ? d.marks : {};
+      const mine = (db.reads[me.id] ||= {}), changed = {};
+      for (const [peer, raw] of Object.entries(marks).slice(0, 200)) {
+        const ts = Math.min(Math.floor(Number(raw)), Date.now());
+        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)]) continue;
+        if (ts > (mine[peer] || 0)) { mine[peer] = ts; changed[peer] = ts; }
+      }
+      if (Object.keys(changed).length) {
+        saveReadsSoon(me.id);
+        for (const o of sockets.get(me.id) || []) if (o !== ws && o.readyState === 1 && o.authed) o.send(JSON.stringify({ t: 'read', marks: changed }));
+      }
+      return ok(true);
     }
     case 'decline': {
       const u = typeof d.id === 'string' && db.users[d.id]; if (!u) return no('That person could not be found.');
@@ -637,6 +656,6 @@ function sweep() {
     console.log(`  sign-ups: ${INVITE ? 'invite code required' : 'open to anyone'}`);
   });
 })();
-async function shutdown() { console.log('Shutting down…'); server.close(); for (const ws of wss.clients) ws.close(1012, 'restarting'); await store.flush(); process.exit(0); }
+async function shutdown() { console.log('Shutting down…'); server.close(); for (const ws of wss.clients) ws.close(1012, 'restarting'); flushReads(); await store.flush(); process.exit(0); }
 process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);
 process.on('unhandledRejection', e => console.error('[unhandled]', e?.message || e));

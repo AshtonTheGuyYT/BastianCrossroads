@@ -10,7 +10,7 @@ const path = require('path');
 
 const MSG_KEEP_PER_CONVO = 5000; // older messages stay in the database; the in-memory window holds the newest
 
-function emptyDb() { return { users: {}, sessions: {}, contacts: {}, blocks: {}, declined: {}, convos: {}, files: {} }; }
+function emptyDb() { return { users: {}, sessions: {}, contacts: {}, blocks: {}, declined: {}, reads: {}, convos: {}, files: {} }; }
 const convoKey = (a, b) => [a, b].sort().join(':');
 
 class JsonStore {
@@ -28,7 +28,7 @@ class JsonStore {
     }, 250);
   }
   saveUser() { this._save(); } saveSession() { this._save(); } deleteSession() { this._save(); } deleteSessions() { this._save(); }
-  setContacts() { this._save(); } setBlocks() { this._save(); } setDeclined() { this._save(); } saveMessage() { this._save(); } deleteMessage() { this._save(); }
+  setContacts() { this._save(); } setBlocks() { this._save(); } setDeclined() { this._save(); } setReads() { this._save(); } saveMessage() { this._save(); } deleteMessage() { this._save(); }
   saveFile() { this._save(); } deleteFile() { this._save(); }
   async flush() { clearTimeout(this.t); fs.writeFileSync(this.file, JSON.stringify(this.db), { mode: 0o600 }); }
 }
@@ -50,6 +50,7 @@ class PgStore {
       CREATE TABLE IF NOT EXISTS contacts (owner TEXT NOT NULL, list JSONB NOT NULL, PRIMARY KEY (owner));
       CREATE TABLE IF NOT EXISTS blocks (owner TEXT NOT NULL, list JSONB NOT NULL, PRIMARY KEY (owner));
       CREATE TABLE IF NOT EXISTS declined (owner TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (owner));
+      CREATE TABLE IF NOT EXISTS reads (owner TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (owner));
       CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY, convo TEXT NOT NULL, sender TEXT NOT NULL, recipient TEXT NOT NULL, body TEXT NOT NULL, ts BIGINT NOT NULL, edited_at BIGINT, reply_to TEXT, reactions JSONB NOT NULL DEFAULT '{}', attachments JSONB NOT NULL DEFAULT '[]');
       CREATE INDEX IF NOT EXISTS messages_convo_ts ON messages(convo, ts);
       ALTER TABLE messages ADD COLUMN IF NOT EXISTS meta JSONB;
@@ -65,6 +66,7 @@ class PgStore {
     for (const r of (await this.pool.query('SELECT owner, list FROM contacts')).rows) db.contacts[r.owner] = r.list;
     for (const r of (await this.pool.query('SELECT owner, list FROM blocks')).rows) db.blocks[r.owner] = r.list;
     for (const r of (await this.pool.query('SELECT owner, data FROM declined')).rows) db.declined[r.owner] = r.data;
+    for (const r of (await this.pool.query('SELECT owner, data FROM reads')).rows) db.reads[r.owner] = r.data;
     const msgs = await this.pool.query(`SELECT * FROM (SELECT *, row_number() OVER (PARTITION BY convo ORDER BY ts DESC) rn FROM messages) x WHERE rn <= $1 ORDER BY ts ASC`, [MSG_KEEP_PER_CONVO]);
     for (const r of msgs.rows) (db.convos[r.convo] ||= []).push({ id: r.id, from: r.sender, to: r.recipient, text: r.body, ts: +r.ts, editedAt: r.edited_at ? +r.edited_at : undefined, replyTo: r.reply_to, reactions: r.reactions || {}, attachments: r.attachments || [], ...(r.meta ? { call: r.meta.call } : {}) });
     for (const r of (await this.pool.query('SELECT id, data FROM files')).rows) db.files[r.id] = { ...r.data, id: r.id };
@@ -81,6 +83,7 @@ class PgStore {
   deleteSessions(userId, exceptHash) { return this._run('DELETE FROM sessions WHERE user_id=$1 AND token_hash <> $2', [userId, exceptHash || '']); }
   setContacts(owner, list) { return this._run('INSERT INTO contacts (owner, list) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET list=$2', [owner, JSON.stringify(list)]); }
   setDeclined(owner, data) { return this._run('INSERT INTO declined (owner, data) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET data=$2', [owner, JSON.stringify(data || {})]); }
+  setReads(owner, data) { return this._run('INSERT INTO reads (owner, data) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET data=$2', [owner, JSON.stringify(data || {})]); }
   setBlocks(owner, list) { return this._run('INSERT INTO blocks (owner, list) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET list=$2', [owner, JSON.stringify(list)]); }
   saveMessage(m) { return this._run(`INSERT INTO messages (id, convo, sender, recipient, body, ts, edited_at, reply_to, reactions, attachments, meta) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       ON CONFLICT (id) DO UPDATE SET body=$5, edited_at=$7, reactions=$9, attachments=$10, meta=$11`, [m.id, convoKey(m.from, m.to), m.from, m.to, m.text, m.ts, m.editedAt || null, m.replyTo || null, JSON.stringify(m.reactions || {}), JSON.stringify(m.attachments || []), m.call ? JSON.stringify({ call: m.call }) : null]); }
