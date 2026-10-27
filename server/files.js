@@ -42,13 +42,14 @@ class LocalFiles {
     });
   }
   async size(id) { try { return fs.statSync(path.join(this.dir, id)).size; } catch { return null; } }
-  async downloadUrl(meta) { const exp = Math.floor(Date.now() / 1000) + DOWNLOAD_LINK_SECONDS; return `/files/${meta.id}?exp=${exp}&sig=${this._sig('get', meta.id, exp)}`; }
-  serve(req, res, meta) {
+  /** save = true makes the link save the file instead of opening it (used by Download buttons). */
+  async downloadUrl(meta, save = false) { const exp = Math.floor(Date.now() / 1000) + DOWNLOAD_LINK_SECONDS; return `/files/${meta.id}?exp=${exp}&sig=${this._sig(save ? 'save' : 'get', meta.id, exp)}${save ? '&save=1' : ''}`; }
+  serve(req, res, meta, save = false) {
     const p = path.join(this.dir, meta.id);
     fs.stat(p, (err, st) => {
       if (err) { res.writeHead(404, { 'content-type': 'application/json' }); return res.end('{"error":"File not found"}'); }
-      const dl = mustDownload(meta);
-      const headers = { 'content-type': dl ? 'application/octet-stream' : meta.type, 'accept-ranges': 'bytes', 'cache-control': 'private, max-age=3600', 'content-disposition': disposition(meta, dl), 'content-security-policy': "default-src 'none'; sandbox", 'x-content-type-options': 'nosniff' };
+      const dl = mustDownload(meta), att = dl || save;
+      const headers = { 'content-type': dl ? 'application/octet-stream' : meta.type, 'accept-ranges': 'bytes', 'cache-control': 'private, max-age=3600', 'content-disposition': disposition(meta, att), 'content-security-policy': "default-src 'none'; sandbox", 'x-content-type-options': 'nosniff' };
       const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
       if (m && (m[1] || m[2])) {
         let start, end;
@@ -85,9 +86,9 @@ class S3Files {
     return { url, method: 'PUT', headers: { 'content-type': meta.type } };
   }
   async size(id) { try { const r = await this.client.send(new this.cmd.HeadObjectCommand({ Bucket: this.bucket, Key: this.key(id) })); return r.ContentLength ?? null; } catch { return null; } }
-  async downloadUrl(meta) {
+  async downloadUrl(meta, save = false) {
     const dl = mustDownload(meta);
-    const c = new this.cmd.GetObjectCommand({ Bucket: this.bucket, Key: this.key(meta.id), ResponseContentDisposition: disposition(meta, dl), ResponseContentType: dl ? 'application/octet-stream' : meta.type });
+    const c = new this.cmd.GetObjectCommand({ Bucket: this.bucket, Key: this.key(meta.id), ResponseContentDisposition: disposition(meta, dl || save), ResponseContentType: dl ? 'application/octet-stream' : meta.type });
     return this.sign(this.client, c, { expiresIn: DOWNLOAD_LINK_SECONDS });
   }
   async remove(id) { try { await this.client.send(new this.cmd.DeleteObjectCommand({ Bucket: this.bucket, Key: this.key(id) })); } catch (e) { console.error('[files] delete failed:', e.message); } }

@@ -64,7 +64,7 @@ const sec = require('./security');
 const { createStore, convoKey } = require('./store');
 const { createFiles } = require('./files');
 
-const VERSION = '3.2.0';
+const VERSION = '3.3.0';
 const ENV = process.env;
 const GB = 1024 ** 3;
 const PORT = +ENV.PORT || 8787;
@@ -347,8 +347,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (p.startsWith('/files/') && files.kind === 'local') {
       const id = p.slice(7), meta = db.files[id];
-      if (!/^[a-f0-9]{32}$/.test(id) || !meta || meta.status !== 'ready' || !files.checkSig('get', id, url.searchParams.get('exp'), url.searchParams.get('sig'))) return json(res, 403, { error: 'This file link has expired or is not valid.' });
-      return files.serve(req, res, meta);
+      if (!/^[a-f0-9]{32}$/.test(id) || !meta || meta.status !== 'ready' || !files.checkSig(url.searchParams.get('save') === '1' ? 'save' : 'get', id, url.searchParams.get('exp'), url.searchParams.get('sig'))) return json(res, 403, { error: 'This file link has expired or is not valid.' });
+      return files.serve(req, res, meta, url.searchParams.get('save') === '1');
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
     const s = limiter.hit('static:' + ip, 600, 60e3); if (!s.ok) return tooMany(res, s.retryAfter);
@@ -589,7 +589,7 @@ async function handle(ws, me, d) {
         // Only people in a conversation the file was sent in (or the uploader) can open it
         const refs = fileRefs.get(id);
         const allowed = meta.owner === me.id || (refs && [...refs].some(k => k.split(':').includes(me.id)));
-        if (allowed) out[id] = await files.downloadUrl(meta);
+        if (allowed) out[id] = await files.downloadUrl(meta, d.save === true);
       }
       return ok(out);
     }

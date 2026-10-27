@@ -1,0 +1,16 @@
+{
+  "appId": "com.bastioncrossroads.app",
+  "appName": "Bastion Crossroads",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#151A22"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#151A22"
+  }
+}

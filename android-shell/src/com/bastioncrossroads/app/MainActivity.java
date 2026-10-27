@@ -24,20 +24,27 @@ import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.PermissionRequest;
+import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -56,12 +63,16 @@ public class MainActivity extends Activity {
     private static final int REQ_FILES = 1001;
     private static final int REQ_MEDIA_PERMS = 1002;
     private static final int REQ_STORAGE = 1003;
+    private static final int REQ_PICK = 1004;
+    private static final int REQ_MEDIA = 1005;
 
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private PermissionRequest pendingWebPermission;
     private String[] pendingDownload; // url, contentDisposition, mimeType
     private boolean showingOffline = false;
+    private NativeMedia media;
+    private boolean pickBusy = false;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -72,6 +83,7 @@ public class MainActivity extends Activity {
         w.setNavigationBarColor(Color.parseColor("#151A22"));
         w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
 
+        media = new NativeMedia(this);
         web = new WebView(this);
         web.setBackgroundColor(Color.parseColor("#151A22"));
         setContentView(web);
@@ -85,10 +97,19 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);                   // needed for picked attachments
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setSupportMultipleWindows(false);
-        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.2 Android");
+        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.3 Android");
         CookieManager.getInstance().setAcceptCookie(true);
 
+        web.addJavascriptInterface(new Bridge(), "BastionNative");
         web.setWebViewClient(new WebViewClient() {
+            // The picker's thumbnails and chosen files are served from the app itself (never the network)
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
+                Uri u = req.getUrl();
+                if (u != null && "https".equals(u.getScheme()) && HOST.equals(u.getHost()) && u.getPath() != null && u.getPath().startsWith("/__native/")) return nativeResponse(u);
+                return null;
+            }
+
             @SuppressWarnings("deprecation")
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -171,12 +192,7 @@ public class MainActivity extends Activity {
                     toast("That file can't be downloaded in the app. Open Bastion Crossroads in your browser to save it.");
                     return;
                 }
-                if (Build.VERSION.SDK_INT < 29 && !has(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                    pendingDownload = new String[] { url, contentDisposition, mimeType };
-                    requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQ_STORAGE);
-                    return;
-                }
-                download(url, contentDisposition, mimeType);
+                downloadNamed(url, URLUtil.guessFileName(url, contentDisposition, mimeType), mimeType);
             }
         });
 
@@ -213,9 +229,15 @@ public class MainActivity extends Activity {
         web.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null);
     }
 
-    private void download(String url, String contentDisposition, String mimeType) {
+    private void downloadNamed(String url, String name, String mimeType) {
+        if (Build.VERSION.SDK_INT < 29 && !has(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            pendingDownload = new String[] { url, name, mimeType };
+            requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQ_STORAGE);
+            return;
+        }
         try {
-            String name = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            if (name == null || name.trim().isEmpty()) name = "download";
+            name = name.replaceAll("[\\\\/]", "_");
             DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
             r.setMimeType(mimeType);
             r.setTitle(name);
@@ -250,10 +272,12 @@ public class MainActivity extends Activity {
             boolean anyDenied = false;
             for (int g : results) if (g != PackageManager.PERMISSION_GRANTED) anyDenied = true;
             if (anyDenied) explainDenied();
+        } else if (code == REQ_MEDIA) {
+            js("perm", mediaState());
         } else if (code == REQ_STORAGE && pendingDownload != null) {
             String[] d = pendingDownload;
             pendingDownload = null;
-            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) download(d[0], d[1], d[2]);
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) downloadNamed(d[0], d[1], d[2]);
             else toast("Allow storage access to save files.");
         }
     }
@@ -291,7 +315,169 @@ public class MainActivity extends Activity {
             copyPicked(src, cb);
             return;
         }
+        if (code == REQ_PICK) {
+            final List<Uri> src = new ArrayList<Uri>();
+            if (result == RESULT_OK && data != null) {
+                if (data.getClipData() != null) {
+                    int n = data.getClipData().getItemCount();
+                    for (int i = 0; i < n; i++) src.add(data.getClipData().getItemAt(i).getUri());
+                } else if (data.getData() != null) {
+                    src.add(data.getData());
+                }
+            }
+            if (src.isEmpty()) { pickBusy = false; js("picked", "[]"); return; }
+            new Thread(new Runnable() {
+                public void run() {
+                    JSONArray out = new JSONArray();
+                    int failed = 0;
+                    for (Uri u : src) {
+                        try {
+                            Uri c = copyOne(u);
+                            File f = new File(new File(PickedFilesProvider.baseDir(MainActivity.this), c.getPathSegments().get(0)), c.getPathSegments().get(1));
+                            JSONObject o = new JSONObject();
+                            o.put("u", "/__native/c/" + Uri.encode(c.getPathSegments().get(0)) + "/" + Uri.encode(f.getName()));
+                            o.put("n", f.getName());
+                            o.put("s", f.length());
+                            o.put("t", PickedFilesProvider.mimeOf(f.getName()));
+                            out.put(o);
+                        } catch (Exception e) { failed++; }
+                    }
+                    final String json = out.toString();
+                    final int bad = failed;
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            pickBusy = false;
+                            if (bad > 0) toast(bad + " file(s) couldn't be opened and were skipped.");
+                            js("picked", json);
+                        }
+                    });
+                }
+            }).start();
+            return;
+        }
         super.onActivityResult(code, result, data);
+    }
+
+    /** Tells the page something happened (permission answered, files chosen). */
+    private void js(final String event, final String value) {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                if (web == null) return;
+                web.evaluateJavascript("window.__bxNative&&window.__bxNative(" + JSONObject.quote(event) + "," + JSONObject.quote(value) + ")", null);
+            }
+        });
+    }
+
+    /** "granted", "partial" (Android 14: only the photos you picked) or "denied". */
+    private String mediaState() {
+        int sdk = Build.VERSION.SDK_INT;
+        if (sdk >= 33) {
+            if (has("android.permission.READ_MEDIA_IMAGES")) return "granted";
+            if (sdk >= 34 && has("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")) return "partial";
+            return "denied";
+        }
+        return has(Manifest.permission.READ_EXTERNAL_STORAGE) ? "granted" : "denied";
+    }
+
+    private void askMedia() {
+        int sdk = Build.VERSION.SDK_INT;
+        List<String> p = new ArrayList<String>();
+        if (sdk >= 33) {
+            p.add("android.permission.READ_MEDIA_IMAGES");
+            p.add("android.permission.READ_MEDIA_VIDEO");
+            if (sdk >= 34) p.add("android.permission.READ_MEDIA_VISUAL_USER_SELECTED");
+        } else {
+            p.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+        requestPermissions(p.toArray(new String[0]), REQ_MEDIA);
+    }
+
+    private boolean canReadMedia() { return !"denied".equals(mediaState()); }
+
+    private boolean canReadVideos() {
+        int sdk = Build.VERSION.SDK_INT;
+        if (sdk >= 33) return has("android.permission.READ_MEDIA_VIDEO") || (sdk >= 34 && has("android.permission.READ_MEDIA_VISUAL_USER_SELECTED"));
+        return has(Manifest.permission.READ_EXTERNAL_STORAGE);
+    }
+
+    private static WebResourceResponse nativeError(int code, String why) {
+        return new WebResourceResponse("text/plain", "utf-8", code, why, new HashMap<String, String>(), new ByteArrayInputStream(new byte[0]));
+    }
+
+    /** /__native/t/<id> = thumbnail, /__native/f/<id> = original photo or video, /__native/c/<dir>/<name> = a file chosen with Browse. */
+    private WebResourceResponse nativeResponse(Uri u) {
+        try {
+            java.util.List<String> seg = u.getPathSegments(); // ["__native", kind, ...]
+            if (seg.size() < 3) return nativeError(404, "Not found");
+            String kind = seg.get(1);
+            Map<String, String> h = new HashMap<String, String>();
+            h.put("Cache-Control", "no-store");
+            if ("c".equals(kind) && seg.size() == 4) {
+                File base = PickedFilesProvider.baseDir(this).getCanonicalFile();
+                File f = new File(new File(base, seg.get(2)), seg.get(3)).getCanonicalFile();
+                if (!f.getPath().startsWith(base.getPath() + File.separator) || !f.isFile()) return nativeError(404, "Not found");
+                h.put("Content-Length", String.valueOf(f.length()));
+                return new WebResourceResponse(PickedFilesProvider.mimeOf(f.getName()), null, 200, "OK", h, new java.io.FileInputStream(f));
+            }
+            String key = seg.get(2);
+            if (seg.size() != 3 || !NativeMedia.KEY.matcher(key).matches()) return nativeError(404, "Not found");
+            if (!canReadMedia()) return nativeError(403, "No access");
+            if ("t".equals(kind)) {
+                byte[] b = media.thumbnail(key);
+                if (b == null) return nativeError(404, "No preview");
+                h.put("Cache-Control", "private, max-age=3600");
+                return new WebResourceResponse("image/jpeg", null, 200, "OK", h, new ByteArrayInputStream(b));
+            }
+            if ("f".equals(kind)) {
+                NativeMedia.Opened o = media.open(key);
+                if (o == null) return nativeError(404, "Not found");
+                if (o.length >= 0) h.put("Content-Length", String.valueOf(o.length));
+                return new WebResourceResponse(o.mime, null, 200, "OK", h, o.stream);
+            }
+        } catch (SecurityException e) {
+            return nativeError(403, "No access");
+        } catch (Throwable e) {
+            return nativeError(500, "Error");
+        }
+        return nativeError(404, "Not found");
+    }
+
+    /** What the page can ask the app to do. Only our own pages are ever shown in this window. */
+    private class Bridge {
+        @JavascriptInterface public String version() { return "3.3.0"; }
+        @JavascriptInterface public String state() { return mediaState(); }
+        @JavascriptInterface public void request() { runOnUiThread(new Runnable() { public void run() { askMedia(); } }); }
+        @JavascriptInterface public String list(int offset, int limit) {
+            try { return media.list(offset, limit, canReadVideos()); } catch (Throwable t) { return "ERR"; }
+        }
+        @JavascriptInterface public void settings() {
+            runOnUiThread(new Runnable() { public void run() {
+                try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
+            } });
+        }
+        @JavascriptInterface public void pickFiles(final String accept, final boolean multiple) {
+            runOnUiThread(new Runnable() { public void run() {
+                if (pickBusy) return;
+                Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType(accept != null && accept.matches("^[a-z]+/[a-z0-9.*+-]+$") ? accept : "*/*");
+                pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
+                try {
+                    pickBusy = true;
+                    startActivityForResult(Intent.createChooser(pick, multiple ? "Choose files" : "Choose a file"), REQ_PICK);
+                } catch (Exception e) {
+                    pickBusy = false;
+                    toast("No file picker app is available.");
+                    js("picked", "[]");
+                }
+            } });
+        }
+        @JavascriptInterface public void download(final String url, final String name, final String mime) {
+            runOnUiThread(new Runnable() { public void run() {
+                if (url == null || !url.startsWith("https://")) { toast("That file can't be downloaded in the app."); return; }
+                downloadNamed(url, name, mime);
+            } });
+        }
     }
 
     /**

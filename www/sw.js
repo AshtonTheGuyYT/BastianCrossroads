@@ -1,5 +1,5 @@
 /* Bastion Crossroads service worker: makes the app installable and open offline. */
-const CACHE = 'bastion-crossroads-v3-3';
+const CACHE = 'bastion-crossroads-v3-4';
 const SHELL = ['./', './index.html', './emoji-art.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -13,7 +13,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // Never cache live data: API calls, uploaded files, sockets
-  if (/^\/(api|files|ws|status|healthz)(\/|\.|$)/.test(url.pathname)) return;
+  if (/^\/(api|files|ws|status|healthz|__native)(\/|\.|$)/.test(url.pathname)) return;
   const fonts = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
   if (url.origin !== location.origin && !fonts) return;
 

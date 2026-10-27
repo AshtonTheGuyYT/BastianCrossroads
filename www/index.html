@@ -220,7 +220,7 @@ body.phone .call-log{margin-left:56px}
 
 .atts{display:flex;flex-direction:column;gap:6px;margin-top:6px;align-items:flex-start;max-width:100%}
 .att-img{display:block;border-radius:var(--r-md);overflow:hidden;max-width:100%;background:var(--raised);position:relative}
-.att-img img{display:block;width:100%;height:100%;object-fit:cover}
+.att-img img{display:block;width:100%;height:100%;object-fit:cover;image-orientation:from-image}
 .att-vid{max-width:min(480px,100%);max-height:360px;border-radius:var(--r-md);background:#000;display:block}
 .att-aud{width:min(360px,100%)}
 .att-cap{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -268,8 +268,8 @@ body.phone .call-log{margin-left:56px}
 .vplay:hover{filter:brightness(1.08)}
 .vplay .ic{width:18px;height:18px}
 .voice.loading .vplay{animation:recPulse 1s ease-in-out infinite}
-.vwave{flex:1;display:flex;align-items:center;gap:2px;height:32px;cursor:pointer;min-width:0;touch-action:none}
-.vwave i{flex:1;min-width:2px;border-radius:2px;background:color-mix(in srgb,var(--text) 30%,transparent);height:calc(var(--h) * 1%);min-height:3px;transition:background .1s}
+.vwave{flex:1;display:flex;align-items:center;gap:1px;height:32px;cursor:pointer;min-width:0;overflow:hidden;touch-action:none}
+.vwave i{flex:1;min-width:1px;border-radius:2px;background:color-mix(in srgb,var(--text) 30%,transparent);height:calc(var(--h) * 1%);min-height:3px;transition:background .1s}
 .vwave i.on{background:var(--accent)}
 .vwave:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 .vtime{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted);min-width:34px;text-align:right}
@@ -416,6 +416,62 @@ body.phone .msg-text.jumbo .emj{width:42px;height:42px}
 .modal-body{padding:8px 20px 20px}
 .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 35%,var(--panel))}
 
+/* in-app photo picker */
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+#picker{display:none;flex-direction:column;height:var(--pk-h,260px);transition:height .24s cubic-bezier(.2,.8,.2,1);position:relative;min-height:0;overflow:hidden;border-radius:inherit}
+#picker.open{display:flex;animation:pkIn .2s ease-out}
+#picker.drag{transition:none}
+@keyframes pkIn{from{opacity:0;transform:translateY(14px)}}
+#composer.picking .composer-row{display:none}
+.pk-grab{flex:none;height:24px;display:grid;place-items:center;cursor:grab;touch-action:none}
+.pk-grab i{width:40px;height:4px;border-radius:2px;background:color-mix(in srgb,var(--muted) 55%,transparent);display:block}
+.pk-head{flex:none;display:flex;align-items:center;gap:6px;padding:0 6px 6px 14px;touch-action:none}
+.pk-head b{font-weight:700;font-size:15px;flex:1}
+.pk-body{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.pk-grid{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:0 3px 3px;align-content:start}
+@media (min-width:560px){.pk-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.pk-cell{position:relative;height:0;padding:0 0 100% 0;background:var(--soft,var(--raised));overflow:hidden;border-radius:6px;display:block}
+.pk-cell img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform .12s,filter .12s}
+.pk-cell.broken img{visibility:hidden}
+.pk-cell .pk-check{position:absolute;top:6px;right:6px;width:23px;height:23px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.3);display:grid;place-items:center;color:var(--accent-ink);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pk-cell .pk-check .ic{width:14px;height:14px;opacity:0;stroke-width:3.2}
+.pk-cell.on{outline:3px solid var(--accent);outline-offset:-3px}
+.pk-cell.on img{transform:scale(.94);filter:brightness(.72)}
+.pk-cell.on .pk-check{background:var(--accent);border-color:var(--accent)}
+.pk-cell.on .pk-check .ic{opacity:1}
+.pk-cell .pk-dur{position:absolute;left:6px;bottom:5px;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000;display:flex;gap:2px;align-items:center}
+.pk-cell .pk-dur .ic{width:12px;height:12px}
+.pk-msg{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:8px 26px 22px;color:var(--muted);font-size:13.5px;line-height:1.45}
+.pk-msg b{color:var(--text);font-size:15px}
+.pk-msg .row2{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.pk-note{flex:none;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;font-size:12.5px;color:var(--muted);background:var(--soft,var(--raised));margin:0 3px 4px;border-radius:8px}
+.pk-note span{flex:1}
+.pk-foot{position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:10px;padding:7px 7px 7px 18px;background:var(--panel);border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow);animation:popIn .15s}
+.pk-foot[hidden]{display:none}
+.pk-foot span{flex:1;font-weight:600}
+.pk-spin{width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:pkSpin .7s linear infinite;display:inline-block;vertical-align:-3px;margin-right:6px}
+@keyframes pkSpin{to{transform:rotate(360deg)}}
+/* audio player */
+.aplayer{display:flex;gap:12px;align-items:center;padding:10px 12px 10px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel);width:min(420px,100%);margin-top:2px}
+.aplayer .vplay{width:46px;height:46px}
+.ap-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ap-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ap-time{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);flex:1;min-width:64px;white-space:nowrap}
+.rng{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;cursor:pointer;--p:0%;touch-action:pan-y}
+.rng::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:linear-gradient(to right,var(--accent) var(--p),color-mix(in srgb,var(--text) 22%,transparent) var(--p))}
+.rng::-moz-range-track{height:5px;border-radius:3px;background:linear-gradient(to right,var(--accent) var(--p),color-mix(in srgb,var(--text) 22%,transparent) var(--p))}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:0;margin-top:-5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.rng::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);border:0}
+.rng:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.ap-volr{width:68px;flex:none}
+.vsm{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--muted);flex:none}
+.vsm:hover{color:var(--text);background:var(--hover)}
+.vsm .ic{width:16px;height:16px}
+.voice{position:relative;width:min(420px,100%);gap:8px}
+.vvolbox{position:absolute;right:6px;bottom:calc(100% + 6px);display:none;align-items:center;gap:6px;padding:6px 12px 6px 6px;border:1px solid var(--line);border-radius:999px;background:var(--panel);box-shadow:var(--shadow);z-index:5;width:190px}
+.voice.volopen .vvolbox{display:flex}
+.att-cap .att-dl{color:var(--muted);text-decoration:underline;font-size:12px}
 .crop-modal{width:min(520px,100%)}
 .crop-stage{position:relative;overflow:hidden;border-radius:var(--r);background:repeating-conic-gradient(color-mix(in srgb,var(--bg) 70%,#000) 0 25%,color-mix(in srgb,var(--bg) 85%,#222) 0 50%) 0 0/18px 18px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;outline:none;margin:0 auto}
 .crop-stage:focus-visible{box-shadow:0 0 0 2px var(--accent)}
@@ -472,7 +528,8 @@ body.phone .msg-text.jumbo .emj{width:42px;height:42px}
 .seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:3px}
 .seg button{padding:6px 14px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--muted)}
 .seg button.on{background:var(--raised);color:var(--text)}
-input[type=range]{accent-color:var(--accent);width:240px}
+input[type=range]{accent-color:var(--accent)}
+#fsRange,#volRange{width:240px}
 .kbd{font-family:var(--mono);font-size:12px;background:var(--raised);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
 .info-list{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;font-size:14px}
 .info-list dt{color:var(--muted)}
@@ -482,8 +539,8 @@ input[type=range]{accent-color:var(--accent);width:240px}
 .viewer-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;padding-top:calc(12px + var(--safe-t));color:#fff}
 .viewer-bar span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .viewer-bar .icon-btn{color:#fff}
-.viewer-img{flex:1;display:grid;place-items:center;padding:10px;min-height:0}
-.viewer-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.viewer-img{flex:1;position:relative;min-height:0}
+.viewer-img img{position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);object-fit:contain;border-radius:6px;image-orientation:from-image}
 
 #toasts{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 24px)}
 .toast{background:var(--text);color:var(--bg);padding:10px 16px;border-radius:var(--r-md);font-weight:600;font-size:14px;box-shadow:var(--shadow);animation:popIn .2s;max-width:100%}
@@ -632,12 +689,13 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
           <div class="tray" id="tray" hidden></div>
           <div class="composer-row">
             <button class="icon-btn" id="attachBtn" title="Attach files (up to 1 GB each)" aria-label="Attach files"></button>
-            <input type="file" id="fileInput" multiple hidden>
+            <input type="file" id="fileInput" class="vh" multiple tabindex="-1" aria-hidden="true">
             <textarea id="input" rows="1" placeholder="Message" aria-label="Message" enterkeyhint="send"></textarea>
             <button class="icon-btn" id="emojiBtn" title="Emoji" aria-label="Emoji"></button>
             <button class="icon-btn send-btn" id="sendBtn" title="Send" aria-label="Send" disabled></button>
           </div>
           <div class="rec-row" id="recRow" hidden></div>
+          <div id="picker" role="dialog" aria-label="Choose photos and files"></div>
         </div>
       </div>
     </section>
@@ -655,7 +713,7 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
 /* =========================================================
    Bastion Crossroads — client
    ========================================================= */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '3.3.0';
 /* ---------------------------------------------------------
    YOUR SERVER: put your hosted server address here, e.g.
    const DEFAULT_SERVER = 'https://bastion-crossroads.onrender.com';
@@ -682,6 +740,9 @@ const ls = {
 
 /* ---------- icons ---------- */
 const ICONS = {
+  volume: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+  mute: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   play: '<path d="M8 5.2v13.6c0 .8.9 1.3 1.6.9l10.6-6.8c.6-.4.6-1.4 0-1.8L9.6 4.3C8.9 3.9 8 4.4 8 5.2z" fill="currentColor" stroke="none"/>',
   pause: '<rect x="6.5" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="13.5" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
@@ -1723,10 +1784,10 @@ function attHTML(a) {
   attIndex.set(a.id, a);
   const t = a.type || '';
   if (t.startsWith('image/')) return `<button class="att-img" data-act="view" data-att="${a.id}" style="${dimStyle(a)}" aria-label="Open image ${esc(a.name)}"><img data-src-att="${a.id}" alt="${esc(a.name)}" draggable="false"></button>`;
-  if (t.startsWith('video/')) return `<div><video class="att-vid no-swipe" controls preload="metadata" playsinline data-src-att="${a.id}"></video><div class="att-cap">${esc(a.name)} <span>${fmtSize(a.size)}</span><a data-href-att="${a.id}" download="${esc(a.name)}">Download</a></div></div>`;
+  if (t.startsWith('video/')) return `<div><video class="att-vid no-swipe" controls preload="metadata" playsinline data-src-att="${a.id}"></video><div class="att-cap">${esc(a.name)} <span>${fmtSize(a.size)}</span><button class="att-dl" data-act="dl" data-att="${a.id}">Download</button></div></div>`;
   if (t.startsWith('audio/') && a.voice) return voiceHTML(a);
-  if (t.startsWith('audio/')) return `<div><audio class="att-aud no-swipe" controls preload="metadata" data-src-att="${a.id}"></audio><div class="att-cap">${esc(a.name)} <span>${fmtSize(a.size)}</span><a data-href-att="${a.id}" download="${esc(a.name)}">Download</a></div></div>`;
-  return `<div class="att-file"><span class="fi">${esc(extOf(a.name))}</span><span class="meta"><b title="${esc(a.name)}">${esc(a.name)}</b><span>${fmtSize(a.size)}</span></span><a class="icon-btn" data-href-att="${a.id}" download="${esc(a.name)}" title="Download ${esc(a.name)}" aria-label="Download ${esc(a.name)}">${ic('download')}</a></div>`;
+  if (t.startsWith('audio/')) return audioHTML(a);
+  return `<div class="att-file"><span class="fi">${esc(extOf(a.name))}</span><span class="meta"><b title="${esc(a.name)}">${esc(a.name)}</b><span>${fmtSize(a.size)}</span></span><button class="icon-btn" data-act="dl" data-att="${a.id}" title="Download ${esc(a.name)}" aria-label="Download ${esc(a.name)}">${ic('download')}</button></div>`;
 }
 const urlCache = new Map();
 function attURL(a) { if (S.backend.mode === 'server') return S.backend.fileURL(a).catch(() => null); if (!urlCache.has(a.id)) urlCache.set(a.id, S.backend.fileURL(a).catch(() => null)); return urlCache.get(a.id); }
@@ -1741,7 +1802,7 @@ function hydrate(root) {
     });
   }
   for (const el of $$('[data-href-att]', root)) { const a = attIndex.get(el.dataset.hrefAtt); if (a) attURL(a).then(u => { if (u) el.href = u; }); }
-  VPlay.paint();
+  VPlay.paint(); VPlay.durations(root);
 }
 function reactsHTML(m) {
   const ents = Object.entries(m.reactions || {}).filter(([, v]) => v?.length);
@@ -1800,6 +1861,7 @@ function openChat(id, { fromHistory } = {}) {
   if (!S.users.has(id)) return;
   if (S.active && S.active !== id) { S.drafts.set(S.active, $('#input').value); }
   if (Rec.r && Rec.r.peer !== id) Rec.cancel(true);
+  if (Picker.open && S.active !== id) Picker.close();
   const switching = S.active !== id;
   S.active = id; S.stick = true; S.editing = null;
   if (switching) { setReply(null); $('#input').value = S.drafts.get(id) || ''; autosize(); updateSend(); hideAC(); }
@@ -1821,6 +1883,7 @@ function closeChat(silent) {
 }
 function closeChatUI() {
   if (Rec.r) Rec.cancel(true);
+  if (Picker.open) Picker.close();
   document.body.classList.remove('chat-open'); hideAC(); Float.close();
   $('#input').blur();
   setTimeout(() => { if (!chatOpen()) document.body.classList.remove('chat-anim'); }, 380);
@@ -1891,6 +1954,224 @@ async function send() {
   } finally { S.sending = false; renderTray(); updateSend(); }
 }
 
+/* ---------- the Android app's own file picker ---------- */
+const NATIVE_APP = /BastionCrossroadsApp/.test(navigator.userAgent);
+const NATIVE = !!(window.BastionNative && typeof window.BastionNative.list === 'function');
+const Native = { pending: null };
+window.__bxNative = (ev, val) => {
+  if (ev === 'perm') Picker.onPerm(val);
+  else if (ev === 'picked') { let arr = []; try { arr = JSON.parse(val) || []; } catch {} Native.gotPicked(arr); }
+};
+/** Files the app chose with "Browse files" arrive as private app addresses; turn them into real File objects. */
+Native.gotPicked = async arr => {
+  const done = Native.pending; Native.pending = null; if (!done) return;
+  const files = [];
+  for (const it of arr) {
+    try {
+      if (it.s > MAX_FILE) { toast(`“${it.n}” is over the 1 GB limit.`, true); continue; }
+      const r = await fetch(it.u); if (!r.ok) throw new Error('read');
+      files.push(new File([await r.blob()], it.n, { type: it.t || '' }));
+    } catch { toast(`“${it.n}” couldn't be read.`, true); }
+  }
+  done(files);
+};
+/** Asks for files in the way that works on this device. Resolves to a list (empty if cancelled). */
+function chooseFiles({ accept = '', multiple = false } = {}) {
+  return new Promise(res => {
+    if (NATIVE && window.BastionNative.pickFiles) {
+      if (Native.pending) Native.pending([]);
+      Native.pending = res; BastionNative.pickFiles(accept, multiple); return;
+    }
+    const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.multiple = multiple; i.className = 'vh'; document.body.append(i);
+    i.onchange = () => { res([...i.files]); i.remove(); };
+    i.oncancel = () => { res([]); i.remove(); };
+    i.click();
+  });
+}
+async function saveURL(a) {
+  if (S.backend.mode !== 'server') return attURL(a);
+  const out = await S.backend.rpc('fileUrls', { ids: [a.id], save: true });
+  return out[a.id] ? S.backend.abs(out[a.id]) : null;
+}
+/** Saves a file to the device. In the app it goes to the Downloads folder. */
+async function downloadAtt(a) {
+  if (!a) return;
+  try {
+    const u = await saveURL(a); if (!u) throw new Error('gone');
+    if (NATIVE && window.BastionNative.download) { BastionNative.download(u, a.name || 'file', a.type || ''); return; }
+    const l = document.createElement('a'); l.href = u; l.download = a.name || 'file'; l.rel = 'noopener'; document.body.append(l); l.click(); l.remove();
+  } catch { toast("That file couldn't be downloaded. It may have been removed.", true); }
+}
+
+/** A sheet of recent photos and videos that takes the place of the message box. Half-height at most. */
+const Picker = {
+  open: false, items: [], sel: new Map(), state: 'granted', done: false, loading: false, expanded: false, busy: false, asked: false,
+  el() { return $('#picker'); },
+  sizes() { const H = innerHeight, peek = Math.max(210, Math.round(H * .31)); return { peek, full: Math.max(peek + 110, Math.round(H * .5)) }; },
+  setH(h, drag) { const el = this.el(); el.classList.toggle('drag', !!drag); el.style.setProperty('--pk-h', Math.round(h) + 'px'); },
+  curH() { return this.el().getBoundingClientRect().height; },
+  toggle() { this.open ? this.close() : this.show(); },
+  show() {
+    if (!S.active) return toast('Open a conversation first, then attach files.');
+    if (this.open) return;
+    if (Rec.r) return toast('Finish or delete your voice message first.');
+    Float.close(); hideAC(); $('#input').blur();
+    this.open = true; this.items = []; this.sel.clear(); this.done = false; this.loading = false; this.busy = false; this.expanded = false;
+    const el = this.el();
+    el.innerHTML = `<div class="pk-grab" id="pkGrab" aria-hidden="true"><i></i></div>
+      <div class="pk-head" id="pkHead"><b>Recent</b><button class="btn ghost sm" data-pk="files">${ic('folder')}Browse files</button><button class="icon-btn" data-pk="close" aria-label="Close">${ic('x')}</button></div>
+      <div class="pk-body" id="pkBody"></div>
+      <div class="pk-foot" id="pkFoot" hidden><span id="pkCount"></span><button class="btn sm" data-pk="add">Add</button></div>`;
+    this.setH(this.sizes().peek);
+    $('#composer').classList.add('picking'); el.classList.add('open');
+    if (!el._wired) { el._wired = true; this.wire(el); }
+    this.state = BastionNative.state();
+    if (this.state === 'denied' && !this.asked) { this.asked = true; this.waiting = true; this.render(); BastionNative.request(); }
+    else this.render();
+    this.settle();
+  },
+  /** The messages above shrink to make room; keep the newest one in view. */
+  settle() { const k = () => { if (S.stick) scrollBottom(); }; k(); setTimeout(k, 120); setTimeout(k, 280); },
+  close() {
+    if (!this.open) return;
+    this.open = false; this.sel.clear();
+    const el = this.el(); el.classList.remove('open', 'drag'); el.innerHTML = '';
+    $('#composer').classList.remove('picking');
+    updateSend(); this.settle();
+  },
+  onPerm(v) {
+    this.state = v; this.waiting = false;
+    if (!this.open) return;
+    this.items = []; this.done = false; this.loading = false; this.render();
+  },
+  render() {
+    const body = $('#pkBody'); if (!body) return;
+    if (this.state === 'denied') {
+      body.innerHTML = `<div class="pk-msg">${this.waiting ? '<b>Waiting for permission…</b>' : `<b>Show your recent photos here</b><span>Bastion Crossroads needs permission to see your photos and videos. It only reads the ones you pick.</span>
+        <div class="row2"><button class="btn sm" data-pk="${this.asked && this.askedTwice ? 'settings' : 'allow'}">${this.asked && this.askedTwice ? 'Open settings' : 'Allow access'}</button><button class="btn ghost sm" data-pk="files">Browse files instead</button></div>`}</div>`;
+      return;
+    }
+    body.innerHTML = `${this.state === 'partial' ? `<div class="pk-note"><span>Showing only the photos you allowed.</span><button class="btn ghost sm" data-pk="allow">Allow more</button></div>` : ''}<div class="pk-grid" id="pkGrid" role="listbox" aria-multiselectable="true" aria-label="Recent photos and videos"></div>`;
+    this.wireGrid($('#pkGrid'));
+    this.more();
+    this.foot();
+  },
+  more() {
+    if (this.loading || this.done || this.state === 'denied') return;
+    this.loading = true;
+    let raw; try { raw = BastionNative.list(this.items.length, 60); } catch { raw = 'ERR'; }
+    this.loading = false;
+    const grid = $('#pkGrid'); if (!grid) return;
+    if (raw === 'ERR' || raw == null) { if (!this.items.length) grid.outerHTML = `<div class="pk-msg"><b>Couldn't load your photos</b><span>You can still pick files from your phone.</span><div class="row2"><button class="btn sm" data-pk="files">Browse files</button></div></div>`; this.done = true; return; }
+    let arr = []; try { arr = JSON.parse(raw); } catch {}
+    if (arr.length < 60) this.done = true;
+    if (!arr.length && !this.items.length) { grid.outerHTML = `<div class="pk-msg"><b>No photos or videos yet</b><span>Take one with your camera, or pick any file from your phone.</span><div class="row2"><button class="btn sm" data-pk="files">Browse files</button></div></div>`; return; }
+    const base = this.items.length; this.items.push(...arr);
+    grid.insertAdjacentHTML('beforeend', arr.map((it, j) => {
+      const vid = it.k[0] === 'v', dur = vid && it.d ? fmtDur(it.d / 1000) : '';
+      return `<button class="pk-cell${this.sel.has(it.k) ? ' on' : ''}" data-i="${base + j}" role="option" aria-selected="${this.sel.has(it.k)}" aria-label="${vid ? 'Video' : 'Photo'} ${esc(it.n)}"><img src="/__native/t/${it.k}" loading="lazy" decoding="async" alt="" draggable="false"><span class="pk-check">${ic('check')}</span>${vid ? `<span class="pk-dur">${ic('play')}${dur}</span>` : ''}</button>`;
+    }).join(''));
+  },
+  foot() {
+    const f = $('#pkFoot'); if (!f) return;
+    const n = this.sel.size; f.hidden = !n;
+    if (n) { $('#pkCount').innerHTML = this.busy ? `<i class="pk-spin"></i>Preparing…` : `${n} selected`; const b = f.querySelector('button'); b.disabled = this.busy; }
+  },
+  toggleItem(i) {
+    const it = this.items[i]; if (!it || this.busy) return;
+    if (this.sel.has(it.k)) this.sel.delete(it.k);
+    else { if (S.pending.length + this.sel.size >= 10) return toast('You can attach up to 10 files per message.'); this.sel.set(it.k, it); }
+    const c = $(`.pk-cell[data-i="${i}"]`); if (c) { const on = this.sel.has(it.k); c.classList.toggle('on', on); c.setAttribute('aria-selected', on); }
+    this.foot(); try { navigator.vibrate?.(8); } catch {}
+  },
+  /** Fetches the chosen originals from the app and puts them in the message's attachment tray. */
+  async commit() {
+    if (this.busy || !this.sel.size) return;
+    this.busy = true; this.foot();
+    const files = []; let bad = 0;
+    for (const it of [...this.sel.values()]) {
+      try {
+        if (it.s > MAX_FILE) { toast(`“${it.n}” is over the 1 GB limit.`, true); continue; }
+        const r = await fetch('/__native/f/' + it.k); if (!r.ok) throw new Error('read');
+        files.push(new File([await r.blob()], it.n, { type: it.t || '', lastModified: it.a || Date.now() }));
+      } catch { bad++; }
+    }
+    this.busy = false;
+    if (bad) toast(bad === 1 ? "One file couldn't be read." : bad + " files couldn't be read.", true);
+    if (files.length) { await addFiles(files); this.close(); } else this.foot();
+  },
+  async browse() {
+    this.close();
+    const files = await chooseFiles({ multiple: true });
+    if (files.length) addFiles(files);
+  },
+  wire(el) {
+    el.addEventListener('click', e => {
+      const b = e.target.closest('[data-pk]');
+      if (b) {
+        const a = b.dataset.pk;
+        if (a === 'close') this.close();
+        else if (a === 'files') this.browse();
+        else if (a === 'add') this.commit();
+        else if (a === 'allow') { if (this.state === 'denied') { if (this.asked) this.askedTwice = true; this.asked = true; } this.waiting = this.state === 'denied'; this.render(); BastionNative.request(); }
+        else if (a === 'settings') BastionNative.settings();
+        return;
+      }
+      const c = e.target.closest('.pk-cell'); if (c) this.toggleItem(+c.dataset.i);
+      else if (e.target.closest('#pkGrab') && !this._dragged) { this.expanded ? this.shrink() : this.grow(); }
+    });
+    el.addEventListener('error', e => { const c = e.target.closest?.('.pk-cell'); if (c && e.target.tagName === 'IMG') c.classList.add('broken'); }, true);
+    // dragging the top of the sheet: up for more room, down to make it smaller, then closed
+    let g = null;
+    el.addEventListener('pointerdown', e => {
+      if (!e.target.closest('#pkGrab, #pkHead') || e.target.closest('button')) return;
+      g = { y: e.clientY, h: this.curH(), id: e.pointerId, ly: e.clientY, lt: e.timeStamp, v: 0, moved: false };
+      this._dragged = false;
+      try { el.setPointerCapture(e.pointerId); } catch {}
+    });
+    el.addEventListener('pointermove', e => {
+      if (!g || e.pointerId !== g.id) return;
+      const dy = e.clientY - g.y; if (Math.abs(dy) > 4) { g.moved = true; this._dragged = true; el.classList.add('drag'); }
+      if (!g.moved) return;
+      const { full } = this.sizes(), dt = e.timeStamp - g.lt; if (dt > 0) g.v = g.v * .5 + ((e.clientY - g.ly) / dt) * .5; g.ly = e.clientY; g.lt = e.timeStamp;
+      this.setH(Math.max(60, Math.min(full + 24, g.h - dy)), true);
+    });
+    const up = e => {
+      if (!g || e.pointerId !== g.id) return;
+      const was = g; g = null; el.classList.remove('drag');
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+      setTimeout(() => { this._dragged = false; }, 50);
+      if (!was.moved) return;
+      const { peek, full } = this.sizes(), h = this.curH();
+      let to;
+      if (was.v > .7) to = h > peek + 40 ? peek : 0;
+      else if (was.v < -.7) to = full;
+      else to = [[0, Math.abs(h)], [peek, Math.abs(h - peek)], [full, Math.abs(h - full)]].sort((a, b) => a[1] - b[1])[0][0];
+      if (h < peek * .7 && was.v > -.7) to = 0;
+      if (to === 0) return this.close();
+      this.expanded = to === full; this.setH(to);
+      this.settle();
+    };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  },
+  grow() { this.expanded = true; this.setH(this.sizes().full); this.settle(); },
+  shrink() { this.expanded = false; this.setH(this.sizes().peek); this.settle(); },
+  wireGrid(grid) {
+    // scrolling the photos up opens the sheet to full height; pulling down at the top shrinks it, then closes it
+    grid.addEventListener('scroll', () => {
+      if (!this.expanded && grid.scrollTop > 4) this.grow();
+      if (grid.scrollTop + grid.clientHeight > grid.scrollHeight - 500) this.more();
+    }, { passive: true });
+    let t = null;
+    grid.addEventListener('touchstart', e => { t = { y: e.touches[0].clientY, top: grid.scrollTop, done: false }; }, { passive: true });
+    grid.addEventListener('touchmove', e => {
+      if (!t || t.done) return;
+      if (t.top <= 0 && grid.scrollTop <= 0 && e.touches[0].clientY - t.y > 70) { t.done = true; this.expanded ? this.shrink() : this.close(); }
+    }, { passive: true });
+    grid.addEventListener('touchend', () => { t = null; }, { passive: true });
+  }
+};
+
 /* ---------- voice messages ---------- */
 const VOICE_MAX = 600, WAVE_N = 40;
 const fmtDur = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -1937,6 +2218,7 @@ const Rec = {
   mime() { for (const t of ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm']) { try { if (MediaRecorder.isTypeSupported(t)) return t; } catch {} } return ''; },
   async start() {
     if (this.r || !S.active) return;
+    if (Picker.open) Picker.close();
     if (!this.supported()) return toast('Voice messages need a newer browser or app version.', true);
     if (Calls.cur) return toast("You can't record a voice message during a call.", true);
     VPlay.stop();
@@ -2082,14 +2364,25 @@ const Rec = {
   }
 };
 
-/** Voice message player shown in the conversation. One plays at a time. */
+/** Plays voice messages and audio files. One plays at a time, with shared volume and speed. */
+const attDur = new Map(); // audio file id -> seconds, read from the file itself
+const rngFill = r => r.style.setProperty('--p', ((r.value - r.min) / ((r.max - r.min) || 1) * 100) + '%');
 const VPlay = {
   cur: null,
   get speed() { return +ls.get('bc.voiceSpeed', 1) || 1; },
+  get vol() { const v = parseFloat(ls.get('bc.vol', 1)); return isFinite(v) ? Math.min(1, Math.max(0, v)) : 1; },
+  get muted() { return !!ls.get('bc.muted', false); },
+  applyVol() { const a = this.cur?.audio; if (a) { a.volume = this.vol; a.muted = this.muted || this.vol === 0; } },
+  setVol(v) { ls.set('bc.vol', v); if (v > 0 && this.muted) ls.set('bc.muted', false); this.applyVol(); this.paintVol(); },
+  toggleMute() { ls.set('bc.muted', !this.muted); this.applyVol(); this.paintVol(); },
+  paintVol(root = document) {
+    const off = this.muted || this.vol === 0;
+    for (const r of $$('.rng-vol', root)) { r.value = off ? 0 : this.vol; rngFill(r); }
+    for (const b of $$('[data-act=vmute], [data-act=vvol]', root)) b.innerHTML = ic(off ? 'mute' : 'volume');
+  },
   async toggle(el) {
     if (!el) return;
-    const id = el.dataset.voice, a = attIndex.get(id); if (!a) return;
-    const c0 = this.cur;
+    const id = el.dataset.voice, c0 = this.cur;
     if (c0 && c0.id === id) { if (!c0.audio) return; if (c0.audio.paused) { if (c0.ended) { c0.audio.currentTime = 0; c0.ended = false; } c0.audio.play().catch(() => {}); } else c0.audio.pause(); return; }
     await this.load(id, true);
   },
@@ -2101,22 +2394,23 @@ const VPlay = {
     this.paint();
     const u = await attURL(a);
     if (this.cur !== c) return;
-    if (!u) { this.cur = null; this.paint(); return toast('That voice message is no longer available.', true); }
+    if (!u) { this.cur = null; this.paintEl(id, null); return toast('That file is no longer available.', true); }
     let src = u;
-    // Recorded audio often can't be skipped through while streaming. Voice messages are small, so load them whole.
-    if (/^https?:/i.test(u)) { try { const res = await fetch(u); if (res.ok) { src = URL.createObjectURL(await res.blob()); c.blob = src; } } catch {} }
+    // Voice messages are small: load them whole so skipping around always works. Longer audio streams.
+    if (a.voice && /^https?:/i.test(u)) { try { const res = await fetch(u); if (res.ok) { src = URL.createObjectURL(await res.blob()); c.blob = src; } } catch {} }
     if (this.cur !== c) { if (c.blob) URL.revokeObjectURL(c.blob); return; }
     const au = c.audio = new Audio(); au.preload = 'auto'; au.src = src;
-    au.playbackRate = this.speed;
-    au.ontimeupdate = au.onplay = au.onpause = () => this.paint();
+    au.playbackRate = this.speed; this.applyVol();
+    au.ontimeupdate = au.onplay = au.onpause = au.ondurationchange = au.onloadedmetadata = () => { if (isFinite(au.duration)) attDur.set(id, au.duration); this.paint(); };
+    au.onwaiting = () => { c.loading = true; this.paint(); }; au.oncanplay = () => { c.loading = false; this.paint(); };
     au.onended = () => { c.ended = true; this.paint(); };
-    au.onerror = () => { if (this.cur !== c) return; toast("This voice message can't be played here. Try downloading it.", true); this.stop(); };
+    au.onerror = () => { if (this.cur !== c) return; toast("This file can't be played here. Try downloading it.", true); this.stop(); };
     c.loading = false;
-    if (seekFrac != null) this.applySeek(c, seekFrac);
+    if (seekFrac != null) { if (this.dur(c)) this.applySeek(c, seekFrac); else au.addEventListener('loadedmetadata', () => this.applySeek(c, seekFrac), { once: true }); }
     if (autoplay) await au.play().catch(() => {});
     this.paint();
   },
-  dur(c) { const d = c.a.voice?.d; return d > 0 ? d : (isFinite(c.audio?.duration) ? c.audio.duration : 0); },
+  dur(c) { const d = c.a.voice?.d; return d > 0 ? d : (isFinite(c.audio?.duration) ? c.audio.duration : (attDur.get(c.id) || 0)); },
   applySeek(c, f) { const d = this.dur(c); if (!c.audio || !d) return; c.audio.currentTime = Math.max(0, Math.min(d - .05, f * d)); c.ended = false; this.paint(); },
   seek(el, f) {
     if (!el) return; f = Math.max(0, Math.min(1, f));
@@ -2137,25 +2431,53 @@ const VPlay = {
     if (c?.blob) URL.revokeObjectURL(c.blob);
     if (c) this.paintEl(c.id, null);
   },
+  /** Reads the length of audio files (not voice messages) so every card shows it before you press play. */
+  durations(root) {
+    for (const el of $$('.aplayer', root)) {
+      const id = el.dataset.voice, a = attIndex.get(id); if (!a || attDur.has(id) || el._probing) continue;
+      el._probing = true;
+      attURL(a).then(u => {
+        if (!u) return;
+        const au = new Audio(); au.preload = 'metadata';
+        au.onloadedmetadata = () => { if (isFinite(au.duration)) attDur.set(id, au.duration); this.paintEl(id, this.cur?.id === id ? this.cur : null); au.removeAttribute('src'); au.load(); };
+        au.onerror = () => {};
+        au.src = u;
+      });
+    }
+    this.paintVol(root);
+    for (const el of $$('.aplayer', root)) if (!this.cur || this.cur.id !== el.dataset.voice) this.paintEl(el.dataset.voice, null);
+  },
   paint() { const c = this.cur; if (c) this.paintEl(c.id, c); },
   paintEl(id, c) {
-    for (const el of $$(`.voice[data-voice="${id}"]`)) {
-      const a = attIndex.get(id), d = c ? this.dur(c) : (a?.voice?.d || 0);
+    for (const el of $$(`.voice[data-voice="${id}"], .aplayer[data-voice="${id}"]`)) {
+      const a = attIndex.get(id), d = c ? this.dur(c) : (a?.voice?.d || attDur.get(id) || 0);
       const t = c?.audio ? (c.ended ? d : c.audio.currentTime) : 0, playing = !!(c?.audio && !c.audio.paused && !c.ended);
-      const p = d ? Math.min(1, t / d) : 0, bars = el.querySelectorAll('.vwave i'), on = Math.round(p * bars.length);
-      bars.forEach((b, i) => b.classList.toggle('on', c ? i < on : false));
+      const p = d ? Math.min(1, t / d) : 0;
       el.classList.toggle('loading', !!c?.loading);
       el.classList.toggle('playing', playing);
       const pb = el.querySelector('.vplay');
-      if (pb.dataset.state !== (playing ? 'pause' : 'play')) { pb.dataset.state = playing ? 'pause' : 'play'; pb.innerHTML = ic(playing ? 'pause' : 'play'); pb.setAttribute('aria-label', playing ? 'Pause voice message' : 'Play voice message'); }
-      el.querySelector('.vtime').textContent = fmtDur(c && (t > 0 || playing) && !c.ended ? t : d);
-      const w = el.querySelector('.vwave'); w.setAttribute('aria-valuenow', Math.round(t)); w.setAttribute('aria-valuetext', fmtDur(t) + ' of ' + fmtDur(d));
+      if (pb.dataset.state !== (playing ? 'pause' : 'play')) { pb.dataset.state = playing ? 'pause' : 'play'; pb.innerHTML = ic(playing ? 'pause' : 'play'); pb.setAttribute('aria-label', playing ? 'Pause' : 'Play'); }
+      if (el.classList.contains('aplayer')) {
+        const r = el.querySelector('.ap-range');
+        if (r && !el.dataset.seek) { r.value = Math.round(p * 1000); rngFill(r); r.setAttribute('aria-valuetext', fmtDur(t) + (d ? ' of ' + fmtDur(d) : '')); }
+        el.querySelector('.ap-time').textContent = c && (t > 0 || playing) ? `${fmtDur(t)} / ${d ? fmtDur(d) : '--:--'}` : (d ? fmtDur(d) : fmtSize(a?.size || 0));
+      } else {
+        const bars = el.querySelectorAll('.vwave i'), on = Math.round(p * bars.length);
+        bars.forEach((b, i) => b.classList.toggle('on', c ? i < on : false));
+        el.querySelector('.vtime').textContent = fmtDur(c && (t > 0 || playing) && !c.ended ? t : d);
+        const w = el.querySelector('.vwave'); w.setAttribute('aria-valuenow', Math.round(t)); w.setAttribute('aria-valuetext', fmtDur(t) + ' of ' + fmtDur(d));
+      }
     }
   }
 };
+function volHTML(cls = '') { const off = VPlay.muted || VPlay.vol === 0; return `<input type="range" class="rng rng-vol ${cls}" min="0" max="1" step="0.01" value="${off ? 0 : VPlay.vol}" aria-label="Volume" style="--p:${(off ? 0 : VPlay.vol) * 100}%">`; }
 function voiceHTML(a) {
-  const w = waveDecode(a.voice.w), d = a.voice.d;
-  return `<div class="voice no-swipe" data-voice="${esc(a.id)}"><button class="vplay" data-act="vplay" data-state="play" aria-label="Play voice message">${ic('play')}</button><div class="vwave" data-act="vseek" role="slider" tabindex="0" aria-label="Voice message, ${fmtDur(d)}" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="0">${w.map(v => `<i style="--h:${Math.round(v * 100)}"></i>`).join('')}</div><span class="vtime">${fmtDur(d)}</span><button class="vspeed" data-act="vspeed" title="Playback speed" aria-label="Playback speed">${VPlay.speed}×</button></div>`;
+  const w = waveDecode(a.voice.w), d = a.voice.d, off = VPlay.muted || VPlay.vol === 0;
+  return `<div class="voice no-swipe" data-voice="${esc(a.id)}"><button class="vplay" data-act="vplay" data-state="play" aria-label="Play">${ic('play')}</button><div class="vwave" data-act="vseek" role="slider" tabindex="0" aria-label="Voice message, ${fmtDur(d)}" aria-valuemin="0" aria-valuemax="${Math.round(d)}" aria-valuenow="0">${w.map(v => `<i style="--h:${Math.round(v * 100)}"></i>`).join('')}</div><span class="vtime">${fmtDur(d)}</span><button class="vspeed" data-act="vspeed" title="Playback speed" aria-label="Playback speed">${VPlay.speed}×</button><button class="vsm" data-act="vvol" title="Volume" aria-label="Volume">${ic(off ? 'mute' : 'volume')}</button><button class="vsm" data-act="dl" data-att="${esc(a.id)}" title="Download" aria-label="Download voice message">${ic('download')}</button><div class="vvolbox"><button class="vsm" data-act="vmute" aria-label="Mute">${ic(off ? 'mute' : 'volume')}</button>${volHTML()}</div></div>`;
+}
+function audioHTML(a) {
+  const off = VPlay.muted || VPlay.vol === 0;
+  return `<div class="aplayer no-swipe" data-voice="${esc(a.id)}"><button class="vplay" data-act="vplay" data-state="play" aria-label="Play">${ic('play')}</button><div class="ap-main"><div class="ap-title" title="${esc(a.name)}">${esc(a.name)}</div><input type="range" class="rng ap-range" min="0" max="1000" step="1" value="0" aria-label="Seek" style="--p:0%"><div class="ap-row"><span class="ap-time">${fmtSize(a.size)}</span><button class="vspeed" data-act="vspeed" title="Playback speed" aria-label="Playback speed">${VPlay.speed}×</button><button class="vsm" data-act="vmute" title="Mute" aria-label="Mute">${ic(off ? 'mute' : 'volume')}</button>${volHTML('ap-volr')}<button class="vsm" data-act="dl" data-att="${esc(a.id)}" title="Download" aria-label="Download ${esc(a.name)}">${ic('download')}</button></div></div></div>`;
 }
 
 /* ---------- autocomplete: @mentions and :emoji ---------- */
@@ -2419,12 +2741,22 @@ async function deleteMsg(id, skip) {
 async function copyMsg(id) { const m = findMsg(id); if (!m) return; try { await navigator.clipboard.writeText(m.text); toast('Copied'); } catch { toast('Copying is blocked here. Select the text instead.', true); } }
 function jumpTo(id) { const el = $(`.msg[data-id="${id}"]`); if (!el) return; el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
 async function openViewer(id) {
-  const a = attIndex.get(id); if (!a) return; const u = await attURL(a); if (!u) return;
-  const v = document.createElement('div'); v.className = 'viewer'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-label', a.name);
-  v.innerHTML = `<div class="viewer-bar"><span>${esc(a.name)}</span><a class="icon-btn" href="${u}" download="${esc(a.name)}" aria-label="Download">${ic('download')}</a><button class="icon-btn" data-x aria-label="Close">${ic('x')}</button></div><div class="viewer-img"><img src="${u}" alt="${esc(a.name)}"></div>`;
-  const close = () => { v.remove(); document.removeEventListener('keydown', k); };
+  const att = attIndex.get(id); if (!att) return; const u = await attURL(att); if (!u) return;
+  const v = document.createElement('div'); v.className = 'viewer'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-label', att.name);
+  v.innerHTML = `<div class="viewer-bar"><span>${esc(att.name)}</span><button class="icon-btn" data-dl aria-label="Download">${ic('download')}</button><button class="icon-btn" data-x aria-label="Close">${ic('x')}</button></div><div class="viewer-img"><img src="${u}" alt="${esc(att.name)}"></div>`;
+  const close = () => { v.remove(); document.removeEventListener('keydown', k, true); };
   const k = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
-  v.addEventListener('click', e => { if (e.target.closest('[data-x]') || e.target.classList.contains('viewer-img')) close(); });
+  // Tapping the empty space around the picture closes it; tapping the picture itself doesn't
+  const onPicture = e => {
+    const img = $('img', v), r = img.getBoundingClientRect(), nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+    const sc = Math.min(r.width / nw, r.height / nh), w = nw * sc, h = nh * sc, x0 = r.left + (r.width - w) / 2, y0 = r.top + (r.height - h) / 2;
+    return e.clientX >= x0 && e.clientX <= x0 + w && e.clientY >= y0 && e.clientY <= y0 + h;
+  };
+  v.addEventListener('click', e => {
+    if (e.target.closest('[data-dl]')) { downloadAtt(att); return; }
+    if (e.target.closest('[data-x]')) return close();
+    if (e.target.closest('.viewer-img') && !onPicture(e)) close();
+  });
   document.addEventListener('keydown', k, true); document.body.append(v);
 }
 function openMsgSheet(id) {
@@ -2498,18 +2830,22 @@ function paneProfile(main) {
     if (f === 'bio') $('#bioCount', main).textContent = e.target.value.length;
     dirty();
   };
-  main.onchange = async e => {
-    const k = e.target.dataset.img; if (!k || !e.target.files[0]) return;
-    const file = e.target.files[0];
+  const pickImage = async (k, file) => {
     if (!file.type.startsWith('image/')) return toast('Choose an image file for your ' + (k === 'avatar' ? 'picture' : 'banner') + '.', true);
-    e.target.value = ''; // so picking the same file again still opens the cropper
     try {
       const src = await loadCropSource(file);
       const out = await openCropper(src, k);
       if (out) { (SET.src ||= {})[k] = src; SET.draft[k] = out.url; SET.cropState = { ...(SET.cropState || {}), [k]: out.state }; dirty(); paneProfile(main); }
     } catch (err) { toast(err.message, true); }
   };
+  main.onchange = e => {
+    const k = e.target.dataset.img; if (!k || !e.target.files[0]) return;
+    const file = e.target.files[0]; e.target.value = ''; // so picking the same file again still opens the cropper
+    pickImage(k, file);
+  };
   main.onclick = async e => {
+    const lab = e.target.closest('label.btn'), imgInp = lab && lab.querySelector('input[data-img]');
+    if (NATIVE && imgInp) { e.preventDefault(); const k = imgInp.dataset.img; chooseFiles({ accept: 'image/*' }).then(fs => { if (fs[0]) pickImage(k, fs[0]); }); return; }
     const c = e.target.closest('[data-clear]'); if (c) { SET.draft[c.dataset.clear] = null; if (SET.src) delete SET.src[c.dataset.clear]; dirty(); paneProfile(main); return; }
     const adj = e.target.closest('[data-adjust]');
     if (adj) {
@@ -2905,7 +3241,7 @@ function setupLongPress() {
   const box = $('#messages');
   box.addEventListener('pointerdown', e => {
     if (!isPhone() || e.pointerType === 'mouse') return;
-    const msg = e.target.closest('.msg'); if (!msg || e.target.closest('a,video,audio,.edit-wrap')) return;
+    const msg = e.target.closest('.msg'); if (!msg || e.target.closest('a,video,audio,input,.edit-wrap')) return;
     cancelPress(); pressEl = msg; pressXY = [e.clientX, e.clientY]; pressFired = false;
     pressT = setTimeout(() => { msg.classList.remove('pressing'); pressFired = true; openMsgSheet(msg.dataset.id); pressT = null; pressEl = null; }, 460);
     setTimeout(() => pressT && msg.classList.add('pressing'), 120);
@@ -2972,7 +3308,7 @@ function wire() {
   $('#sendBtn').onclick = () => $('#sendBtn').dataset.mode === 'mic' ? Rec.start() : send();
   $('#recRow').addEventListener('click', e => Rec.onClick(e));
   updateSend();
-  $('#attachBtn').onclick = () => $('#fileInput').click();
+  $('#attachBtn').onclick = () => NATIVE ? Picker.toggle() : $('#fileInput').click();
   $('#fileInput').onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
   $('#emojiBtn').onclick = e => openEmoji(e.currentTarget, em => { insertAtCaret(ta, em.startsWith(':') ? em + ' ' : em); if (!isPhone()) ta.focus(); });
   $('#tray').addEventListener('click', e => { const r = e.target.closest('[data-rm]'); if (!r) return; const i = S.pending.findIndex(p => p.id === r.dataset.rm); if (i >= 0) { const [p] = S.pending.splice(i, 1); if (p.thumb) URL.revokeObjectURL(p.thumb); } renderTray(); updateSend(); });
@@ -2981,6 +3317,8 @@ function wire() {
   const box = $('#messages');
   box.addEventListener('scroll', () => { S.stick = box.scrollHeight - box.scrollTop - box.clientHeight < 60; }, { passive: true });
   box.addEventListener('click', e => {
+    if (Picker.open) { Picker.close(); }
+    for (const v of $$('.voice.volopen')) if (!v.contains(e.target)) v.classList.remove('volopen');
     const cb = e.target.closest('[data-callback]'); if (cb) { Calls.start(S.active, cb.dataset.callback); return; }
     const sp = e.target.closest('.spoiler'); if (sp) { sp.classList.toggle('open'); return; }
     const u = e.target.closest('[data-user]'); if (u) { showProfile(u.dataset.user, u); return; }
@@ -2996,9 +3334,18 @@ function wire() {
     else if (act === 'jump') jumpTo(el.dataset.to);
     else if (act === 'edit-save') saveEdit();
     else if (act === 'edit-cancel') cancelEdit();
-    else if (act === 'vplay') VPlay.toggle(el.closest('.voice'));
+    else if (act === 'vplay') VPlay.toggle(el.closest('.voice, .aplayer'));
     else if (act === 'vspeed') VPlay.cycleSpeed();
+    else if (act === 'dl') downloadAtt(attIndex.get(el.dataset.att));
+    else if (act === 'vmute') VPlay.toggleMute();
+    else if (act === 'vvol') el.closest('.voice').classList.toggle('volopen');
     else if (act === 'vseek') { const r = el.getBoundingClientRect(); VPlay.seek(el.closest('.voice'), (e.clientX - r.left) / r.width); }
+  });
+  box.addEventListener('input', e => {
+    const r = e.target.closest?.('.rng'); if (!r) return;
+    rngFill(r);
+    if (r.classList.contains('rng-vol')) VPlay.setVol(+r.value);
+    else if (r.classList.contains('ap-range')) { const el = r.closest('.aplayer'); el.dataset.seek = '1'; clearTimeout(el._st); el._st = setTimeout(() => { delete el.dataset.seek; }, 500); VPlay.seek(el, r.value / 1000); }
   });
   box.addEventListener('keydown', e => {
     const w = e.target.closest?.('.vwave'); if (!w) return;
@@ -3024,6 +3371,7 @@ function wire() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (Rec.r && !Modal.top) { Rec.cancel(); return; }
+      if (Picker.open && !Modal.top && !Float.cur) { Picker.close(); return; }
       if (Float.cur) { Float.close(); return; }
       if (Modal.top) { if (SET && Modal.stack.length === 1) tryCloseSettings(); else Modal.close(); return; }
       if (AC.items.length) { hideAC(); return; }
@@ -3095,7 +3443,9 @@ async function boot() {
 boot().catch(e => { console.error(e); document.body.innerHTML = `<div style="padding:40px;font-family:system-ui;color:#eee;background:#151A22;height:100vh">Bastion Crossroads could not start: ${esc(e.message)}</div>`; });
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.Capacitor) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // The Android app serves its own photo thumbnails, which a service worker could get in the way of. It always loads fresh from the server anyway.
+  if (NATIVE_APP) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+  else window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 </script>
 </body>
