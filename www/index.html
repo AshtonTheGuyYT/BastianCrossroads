@@ -677,6 +677,7 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
         <button class="head-who" id="headWho"></button>
         <button class="icon-btn" id="callVoice" title="Voice call" aria-label="Start a voice call" hidden></button>
         <button class="icon-btn" id="callVideo" title="Video call" aria-label="Start a video call" hidden></button>
+        <button class="icon-btn" id="searchMessages" title="Search this conversation" aria-label="Search this conversation"></button>
         <button class="icon-btn" id="headProfile" title="View profile" aria-label="View profile"></button>
       </header>
       <div id="messages" role="log" aria-live="polite" tabindex="-1"></div>
@@ -2745,6 +2746,16 @@ async function openAddModal(prefill = '') {
   } catch { $('#sugg', m).innerHTML = ''; }
 }
 
+function openMessageSearch() {
+  if (!S.active) return;
+  const peer = S.active, messages = S.msgs.get(peer) || [];
+  const m = Modal.open('<div class="modal-head"><h3>Search conversation</h3><button class="icon-btn" data-x aria-label="Close">' + ic('x') + '</button></div><div class="modal-body"><input class="inp" id="msgFindInput" placeholder="Search messages or file names" autocomplete="off"><div id="msgFindResults" class="find-results"><p class="hint">Type a word or file name to search this conversation.</p></div></div>', { label: 'Search conversation' });
+  $('[data-x]', m).onclick = () => Modal.close();
+  const input = $('#msgFindInput', m), results = $('#msgFindResults', m);
+  input.oninput = () => { const q = input.value.trim().toLowerCase(); if (!q) { results.innerHTML = '<p class="hint">Type a word or file name to search this conversation.</p>'; return; } const found = messages.filter(x => (x.text || '').toLowerCase().includes(q) || (x.attachments || []).some(a => (a.name || '').toLowerCase().includes(q))).slice(-40).reverse(); results.innerHTML = found.length ? found.map(x => '<button class="find-result" data-find-msg="' + esc(x.id) + '"><span>' + esc((x.text || (x.attachments || []).map(a => a.name).join(', ') || 'Attachment').slice(0, 150)) + '</span><time>' + esc(timeFull(x.ts)) + '</time></button>').join('') : '<p class="hint">No matching messages.</p>'; };
+  results.onclick = e => { const b = e.target.closest('[data-find-msg]'); if (!b) return; const id = b.dataset.findMsg; Modal.close(); const el = $('#messages [data-id]').find(x => x.dataset.id === id); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('mentioned'); setTimeout(() => el.classList.remove('mentioned'), 1600); } };
+  input.focus();
+}
 /* =========================================================
    Message actions
    ========================================================= */
@@ -3285,7 +3296,8 @@ function wire() {
   $('#icSearch').outerHTML = ic('search');
   $('#addBtn').innerHTML = ic('userPlus'); $('#gearBtn').innerHTML = ic('gear');
   $('#emptyAdd').innerHTML = ic('userPlus') + 'Add a person';
-  $('#backBtn').innerHTML = ic('back'); $('#headProfile').innerHTML = ic('user'); $('#callVoice').innerHTML = ic('phone'); $('#callVideo').innerHTML = ic('video');
+  $('#backBtn').innerHTML = ic('back'); $('#headProfile').innerHTML = ic('user'); $('#searchMessages').innerHTML = ic('search');
+  $('#searchMessages').onclick = () => openMessageSearch(); $('#callVoice').innerHTML = ic('phone'); $('#callVideo').innerHTML = ic('video');
   $('#callVoice').onclick = () => Calls.start(S.active, 'audio'); $('#callVideo').onclick = () => Calls.start(S.active, 'video');
   $('#callUI').addEventListener('click', e => { const b = e.target.closest('[data-call]'); if (!b) return; ({ accept: () => Calls.accept(false), acceptVideo: () => Calls.accept(true), decline: () => Calls.decline(), hangup: () => Calls.hangup(), mic: () => Calls.toggleMic(), cam: () => Calls.toggleCam(), flip: () => Calls.flip() })[b.dataset.call]?.(); });
   $('#attachBtn').innerHTML = ic('clip'); $('#emojiBtn').innerHTML = ic('smile'); $('#sendBtn').innerHTML = ic('send');
