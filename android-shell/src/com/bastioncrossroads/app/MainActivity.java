@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -17,6 +18,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.database.Cursor;
 import android.provider.OpenableColumns;
+import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
 import android.view.View;
 import android.view.Window;
@@ -65,6 +67,7 @@ public class MainActivity extends Activity {
     private static final int REQ_STORAGE = 1003;
     private static final int REQ_PICK = 1004;
     private static final int REQ_MEDIA = 1005;
+    private static final int REQ_CAMERA = 1006;
 
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
@@ -73,6 +76,7 @@ public class MainActivity extends Activity {
     private boolean showingOffline = false;
     private NativeMedia media;
     private boolean pickBusy = false;
+    private Uri pendingCameraUri;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -158,7 +162,7 @@ public class MainActivity extends Activity {
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
-                Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE);
                 // Respect the page's accept="" (e.g. images only for a profile picture)
                 List<String> types = new ArrayList<String>();
@@ -315,6 +319,7 @@ public class MainActivity extends Activity {
             copyPicked(src, cb);
             return;
         }
+        if (code == REQ_CAMERA) { finishCamera(result); return; }
         if (code == REQ_PICK) {
             final List<Uri> src = new ArrayList<Uri>();
             if (result == RESULT_OK && data != null) {
@@ -450,6 +455,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String list(int offset, int limit) {
             try { return media.list(offset, limit, canReadVideos()); } catch (Throwable t) { return "ERR"; }
         }
+        @JavascriptInterface public void capturePhoto() { runOnUiThread(new Runnable() { public void run() { beginCamera(); } }); }
         @JavascriptInterface public void settings() {
             runOnUiThread(new Runnable() { public void run() {
                 try { startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
@@ -458,7 +464,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void pickFiles(final String accept, final boolean multiple) {
             runOnUiThread(new Runnable() { public void run() {
                 if (pickBusy) return;
-                Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE);
                 pick.setType(accept != null && accept.matches("^[a-z]+/[a-z0-9.*+-]+$") ? accept : "*/*");
                 pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
@@ -504,6 +510,65 @@ public class MainActivity extends Activity {
                         cb.onReceiveValue(out.isEmpty() ? null : out.toArray(new Uri[0]));
                     }
                 });
+            }
+        }).start();
+    }
+
+    /** Opens the device camera and writes the captured original into the user's Gallery. */
+    private void beginCamera() {
+        if (pickBusy) return;
+        Intent camera = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        if (camera.resolveActivity(getPackageManager()) == null) { toast("No camera app is available."); js("picked", "[]"); return; }
+        try {
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Images.Media.DISPLAY_NAME, "BC_" + System.currentTimeMillis() + ".jpg");
+            values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+            if (Build.VERSION.SDK_INT >= 29) values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Bastion Crossroads");
+            pendingCameraUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+            if (pendingCameraUri == null) throw new Exception("gallery");
+            camera.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, pendingCameraUri);
+            camera.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            pickBusy = true;
+            startActivityForResult(camera, REQ_CAMERA);
+        } catch (Exception e) {
+            pickBusy = false;
+            if (pendingCameraUri != null) getContentResolver().delete(pendingCameraUri, null, null);
+            pendingCameraUri = null;
+            toast("The camera couldn't be opened.");
+            js("picked", "[]");
+        }
+    }
+
+    private void finishCamera(int result) {
+        final Uri captured = pendingCameraUri;
+        pendingCameraUri = null;
+        if (result != RESULT_OK || captured == null) {
+            if (captured != null) getContentResolver().delete(captured, null, null);
+            pickBusy = false; js("picked", "[]"); return;
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues ready = new ContentValues();
+                ready.put(MediaStore.Images.Media.IS_PENDING, 0);
+                getContentResolver().update(captured, ready, null, null);
+            }
+        } catch (Exception ignored) { }
+        new Thread(new Runnable() {
+            public void run() {
+                JSONArray out = new JSONArray();
+                try {
+                    Uri copy = copyOne(captured);
+                    java.util.List<String> seg = copy.getPathSegments();
+                    File f = new File(new File(PickedFilesProvider.baseDir(MainActivity.this), seg.get(0)), seg.get(1));
+                    JSONObject item = new JSONObject();
+                    item.put("u", "/__native/c/" + Uri.encode(seg.get(0)) + "/" + Uri.encode(f.getName()));
+                    item.put("n", f.getName()); item.put("s", f.length()); item.put("t", "image/jpeg");
+                    out.put(item);
+                } catch (Exception e) {
+                    getContentResolver().delete(captured, null, null);
+                }
+                final String json = out.toString();
+                runOnUiThread(new Runnable() { public void run() { pickBusy = false; js("picked", json); } });
             }
         }).start();
     }
