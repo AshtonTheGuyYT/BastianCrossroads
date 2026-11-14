@@ -1188,7 +1188,7 @@ class ServerBackend {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.t === 'hello') {
         helloed = true; this.retry = 0; setConn(true);
-        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, friendRequests: d.friendRequests || { incoming: [], outgoing: [] }, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
+        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, friendRequests: d.friendRequests || { incoming: [], outgoing: [] }, reads: d.reads, readBy: d.readBy || {}, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
         if (onHello) { const f = onHello; onHello = null; onFail = null; f(data); } else emit({ t: 'resync', data });
         return;
       }
@@ -1313,7 +1313,7 @@ function showWaking() {
    App state
    ========================================================= */
 const S = {
-  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, pinnedUsers: [], mutedUsers: [], friendRequests: { incoming: [], outgoing: [] },
+  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, readBy: {}, pinnedUsers: [], mutedUsers: [], friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
   settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime', quietHours: false, quietStart: '22:00', quietEnd: '07:00' }, ls.get('bc.settings', {}))
@@ -1337,7 +1337,7 @@ function avatarHTML(u, s = 40, dot = true) {
 /* ---------- events from backends ---------- */
 function emit(e) { try { onEvent(e); } catch (err) { console.error(err); } }
 function loadSnapshot(d) {
-  S.me = d.me; S.pinnedUsers = ls.get('bc.pinned.' + S.me.id, []); S.mutedUsers = ls.get('bc.muted.' + S.me.id, []); S.users = new Map();
+  S.me = d.me; S.readBy = d.readBy || {}; S.pinnedUsers = ls.get('bc.pinned.' + S.me.id, []); S.mutedUsers = ls.get('bc.muted.' + S.me.id, []); S.users = new Map();
   for (const u of d.users || []) if (u.id !== d.me.id) S.users.set(u.id, u);
   S.contacts = [...(d.contacts || [])];
   S.msgs = new Map();
@@ -1400,6 +1400,12 @@ function onEvent(e) {
       const p = e.from; clearTimeout(S.typing.get(p));
       S.typing.set(p, setTimeout(() => { S.typing.delete(p); renderTyping(); renderList(); }, 5000));
       renderTyping(); renderList();
+      break;
+    }
+    case 'readReceipt': {
+      if (!S.contacts.includes(e.from) || !Number.isFinite(e.ts)) break;
+      S.readBy[e.from] = Math.max(S.readBy[e.from] || 0, e.ts);
+      if (S.active === e.from) renderMessages();
       break;
     }
     case 'read': { // you read something on another device
@@ -1852,10 +1858,11 @@ function msgHTML(m, grouped) {
     body = `<div class="edit-wrap"><textarea class="inp edit-box" rows="2" aria-label="Edit message">${esc(S.editDraft ?? m.text)}</textarea><div class="hint" style="margin-top:6px">Enter to save, Esc to cancel. <button class="btn sm" data-act="edit-save">Save</button> <button class="btn ghost sm" data-act="edit-cancel">Cancel</button></div></div>`;
   } else body = m.text ? `<div class="msg-text${isJumbo(m.text) ? ' jumbo' : ''}">${fmt(m.text)}${m.editedAt ? `<span class="edited" title="Edited ${esc(timeFull(m.editedAt))}">(edited)</span>` : ''}</div>` : '';
   const atts = m.attachments?.length ? `<div class="atts">${m.attachments.map(attHTML).join('')}</div>` : '';
+  const seen = mine && (S.readBy[peerOf(m)] || 0) >= m.ts ? '<span class="read-receipt">Seen</span>' : '';
   const tools = `<div class="msg-tools" role="toolbar" aria-label="Message actions">${QUICK.slice(0, 3).map(e => `<button class="tool" data-act="toggle" data-emoji="${e}" title="React with :${emojiName(e)}:">${emoji(e)}</button>`).join('')}<button class="tool" data-act="react-more" title="Add reaction" aria-label="Add reaction">${ic('smilePlus')}</button><span class="tool-sep"></span><button class="tool" data-act="reply" title="Reply" aria-label="Reply">${ic('reply')}</button>${mine ? `<button class="tool" data-act="edit" title="Edit" aria-label="Edit">${ic('pencil')}</button><button class="tool danger" data-act="delete" title="Delete" aria-label="Delete">${ic('trash')}</button>` : ''}${m.text ? `<button class="tool" data-act="copy" title="Copy text" aria-label="Copy text">${ic('copy')}</button>` : ''}</div>`;
   return `<article class="msg${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}${ment ? ' mentioned' : ''}" data-id="${m.id}">
     <div class="msg-gutter">${grouped ? `<time>${timeOnly(m.ts)}</time>` : `<button class="av-btn" data-user="${u.id}" aria-label="View ${esc(u.displayName)}'s profile">${avatarHTML(u, 40, false)}</button>`}</div>
-    <div class="msg-body">${m.replyTo ? replyRefHTML(m) : ''}${grouped ? '' : `<div class="msg-head"><button class="msg-author" data-user="${u.id}">${emoEsc(u.displayName || u.username)}</button><time title="${esc(new Date(m.ts).toLocaleString())}">${timeFull(m.ts)}</time></div>`}${body}${atts}${reactsHTML(m)}</div>${tools}</article>`;
+    <div class="msg-body">${m.replyTo ? replyRefHTML(m) : ''}${grouped ? '' : `<div class="msg-head"><button class="msg-author" data-user="${u.id}">${emoEsc(u.displayName || u.username)}</button><time title="${esc(new Date(m.ts).toLocaleString())}">${timeFull(m.ts)}</time></div>`}${body}${atts}${reactsHTML(m)}${seen}</div>${tools}</article>`;
 }
 function scrollBottom() { const b = $('#messages'); b.scrollTop = b.scrollHeight; }
 function renderMessages() {
@@ -2794,7 +2801,7 @@ const BCContextMenu = (() => {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   window.addEventListener('scroll', close, true);
   const style = document.createElement('style');
-  style.textContent = '.bc-context-menu{position:fixed;z-index:2147483000;min-width:205px;max-width:min(280px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:10px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.pin-action{color:var(--accent,#E9B44C);font-weight:750;background:color-mix(in srgb,var(--accent,#E9B44C) 10%,transparent)}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
+  style.textContent = '.read-receipt{display:block;margin-top:4px;text-align:right;color:var(--muted,#9aa5b3);font-size:10px;font-weight:650}.bc-context-menu{position:fixed;z-index:2147483000;min-width:205px;max-width:min(280px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:10px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.pin-action{color:var(--accent,#E9B44C);font-weight:750;background:color-mix(in srgb,var(--accent,#E9B44C) 10%,transparent)}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
   document.head.append(style);
   return { close };
 })();
