@@ -518,12 +518,15 @@ async function handle(ws, me, d) {
       store.setContacts(me.id, db.contacts[me.id]); store.setContacts(peer, db.contacts[peer]);
       const key = convoKey(me.id, peer), old = db.convos[key] || [];
       delete db.convos[key];
-      for (const m of old) {
-        store.deleteMessage(m.id);
-        for (const a of m.attachments || []) {
-          const refs = fileRefs.get(a.id); if (refs) { refs.delete(key); if (!refs.size) fileRefs.delete(a.id); }
-        }
+      // Delete the entire persisted conversation, including messages older than the in-memory window.
+      store.deleteConversation(key);
+      for (const m of old) for (const a of m.attachments || []) {
+        const refs = fileRefs.get(a.id); if (refs) { refs.delete(key); if (!refs.size) fileRefs.delete(a.id); }
       }
+      // Treat any later message as a fresh message request, never as a revived old chat.
+      (db.declined[me.id] ||= {})[peer] = Date.now();
+      (db.declined[peer] ||= {})[me.id] = Date.now();
+      store.setDeclined(me.id, db.declined[me.id]); store.setDeclined(peer, db.declined[peer]);
       delete (db.reads[me.id] ||= {})[peer]; delete (db.reads[peer] ||= {})[me.id];
       store.setReads(me.id, db.reads[me.id]); store.setReads(peer, db.reads[peer]);
       sendTo(me.id, { t: 'contacts', contacts: db.contacts[me.id] });
