@@ -615,7 +615,7 @@ async function handle(ws, me, d) {
       const mine = (db.reads[me.id] ||= {}), changed = {};
       for (const [peer, raw] of Object.entries(marks).slice(0, 200)) {
         const ts = Math.min(Math.floor(Number(raw)), Date.now());
-        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)] || !accepted(me.id, peer) || !accepted(peer, me.id) || db.users[peer].readReceipts === false) continue;
+        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)] || !accepted(me.id, peer) || !accepted(peer, me.id) || me.readReceipts === false) continue;
         if (ts > (mine[peer] || 0)) { mine[peer] = ts; changed[peer] = ts; }
       }
       if (Object.keys(changed).length) {
