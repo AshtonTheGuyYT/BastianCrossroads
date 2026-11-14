@@ -2754,7 +2754,7 @@ function openMessageSearch() {
   $('[data-x]', m).onclick = () => Modal.close();
   const input = $('#msgFindInput', m), results = $('#msgFindResults', m);
   input.oninput = () => { const q = input.value.trim().toLowerCase(); if (!q) { results.innerHTML = '<p class="hint">Type a word or file name to search this conversation.</p>'; return; } const found = messages.filter(x => (x.text || '').toLowerCase().includes(q) || (x.attachments || []).some(a => (a.name || '').toLowerCase().includes(q))).slice(-40).reverse(); results.innerHTML = found.length ? found.map(x => '<button class="find-result" data-find-msg="' + esc(x.id) + '"><span>' + esc((x.text || (x.attachments || []).map(a => a.name).join(', ') || 'Attachment').slice(0, 150)) + '</span><time>' + esc(timeFull(x.ts)) + '</time></button>').join('') : '<p class="hint">No matching messages.</p>'; };
-  results.onclick = e => { const b = e.target.closest('[data-find-msg]'); if (!b) return; const id = b.dataset.findMsg; Modal.close(); const el = $('#messages [data-id]').find(x => x.dataset.id === id); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('mentioned'); setTimeout(() => el.classList.remove('mentioned'), 1600); } };
+  results.onclick = e => { const b = e.target.closest('[data-find-msg]'); if (!b) return; const id = b.dataset.findMsg; Modal.close(); const el = $$('#messages [data-id]').find(x => x.dataset.id === id); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('mentioned'); setTimeout(() => el.classList.remove('mentioned'), 1600); } };
   input.focus();
 }
 /* =========================================================
