@@ -29,7 +29,7 @@ class JsonStore {
   }
   saveUser() { this._save(); } saveSession() { this._save(); } deleteSession() { this._save(); } deleteSessions() { this._save(); }
   setContacts() { this._save(); } setFriendRequests() { this._save(); } setBlocks() { this._save(); } setDeclined() { this._save(); } setReads() { this._save(); } saveMessage() { this._save(); } deleteMessage() { this._save(); }
-  saveFile() { this._save(); } deleteFile() { this._save(); }
+  saveFile() { this._save(); } deleteFile() { this._save(); } deleteConversation() { this._save(); }
   async flush() { clearTimeout(this.t); fs.writeFileSync(this.file, JSON.stringify(this.db), { mode: 0o600 }); }
 }
 
@@ -91,6 +91,7 @@ class PgStore {
   saveMessage(m) { return this._run(`INSERT INTO messages (id, convo, sender, recipient, body, ts, edited_at, reply_to, reactions, attachments, meta) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       ON CONFLICT (id) DO UPDATE SET body=$5, edited_at=$7, reactions=$9, attachments=$10, meta=$11`, [m.id, convoKey(m.from, m.to), m.from, m.to, m.text, m.ts, m.editedAt || null, m.replyTo || null, JSON.stringify(m.reactions || {}), JSON.stringify(m.attachments || []), m.call ? JSON.stringify({ call: m.call }) : null]); }
   deleteMessage(id) { return this._run('DELETE FROM messages WHERE id=$1', [id]); }
+  deleteConversation(key) { return this._run('DELETE FROM messages WHERE convo=$1', [key]); }
   saveFile(f) { const { id, owner, createdAt, ...rest } = f; return this._run('INSERT INTO files (id, owner, data, created_at) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO UPDATE SET data=$3', [id, owner, { owner, createdAt, ...rest }, createdAt]); }
   deleteFile(id) { return this._run('DELETE FROM files WHERE id=$1', [id]); }
   async flush() { await this.q; await this.pool.end().catch(() => {}); }
