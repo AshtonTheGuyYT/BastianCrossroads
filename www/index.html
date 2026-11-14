@@ -2717,6 +2717,7 @@ async function addPerson(username, open) {
     const u = await S.backend.addContact(username);
     S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u });
     if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id);
+    else if (u.requestState === 'sent' && !S.friendRequests.outgoing.includes(u.id)) S.friendRequests.outgoing.push(u.id);
     S.query = ''; $('#search').value = ''; S.dirResults = [];
     renderList(); renderFriendsRequests(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`);
     if (open && u.requestState === 'friends') openChat(u.id);
@@ -2734,7 +2735,7 @@ async function openAddModal(prefill = '') {
   $('#addForm', m).onsubmit = async e => {
     e.preventDefault(); const v = inp.value.trim(); if (!v) { $('#addErr', m).textContent = 'Enter a username.'; return; }
     $('#addGo', m).disabled = true;
-    try { const u = await S.backend.addContact(v); S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u }); if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id); renderList(); renderFriendsRequests(); Modal.close(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`); if (u.requestState === 'friends') openChat(u.id); }
+    try { const u = await S.backend.addContact(v); S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u }); if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id); else if (u.requestState === 'sent' && !S.friendRequests.outgoing.includes(u.id)) S.friendRequests.outgoing.push(u.id); renderList(); renderFriendsRequests(); Modal.close(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`); if (u.requestState === 'friends') openChat(u.id); }
     catch (err) { $('#addErr', m).textContent = err.message; $('#addGo', m).disabled = false; }
   };
   try {
