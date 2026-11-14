@@ -1241,7 +1241,9 @@ class ServerBackend {
   remove(peer, id) { return this.rpc('delete', { peer, id }); }
   async saveProfile(p) { const u = await this.rpc('profile', { profile: p }); return u; }
   search(q) { return this.rpc('search', { q }); }
-  addContact(username) { return this.rpc('add', { username: username.trim().toLowerCase().replace(/^@/, '') }); }
+  addContact(username) { return this.rpc('add', { username: username.trim().toLowerCase().replace(/^@/, '') }); }  respondFriendRequest(id, accept) { return this.rpc('friendRespond', { id, accept }); }
+  cancelFriendRequest(id) { return this.rpc('cancelFriendRequest', { id }); }
+
   removeContact(id) { return this.rpc('remove', { id }); }
   block(id, on) { return this.rpc(on ? 'block' : 'unblock', { id }); }
   accept(id) { return this.rpc('accept', { id }); }
