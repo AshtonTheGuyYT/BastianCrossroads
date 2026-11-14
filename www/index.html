@@ -1312,7 +1312,7 @@ function showWaking() {
    App state
    ========================================================= */
 const S = {
-  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, friendRequests: { incoming: [], outgoing: [] },
+  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, pinnedUsers: [], friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
   settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
@@ -1336,7 +1336,7 @@ function avatarHTML(u, s = 40, dot = true) {
 /* ---------- events from backends ---------- */
 function emit(e) { try { onEvent(e); } catch (err) { console.error(err); } }
 function loadSnapshot(d) {
-  S.me = d.me; S.users = new Map();
+  S.me = d.me; S.pinnedUsers = ls.get('bc.pinned.' + S.me.id, []); S.users = new Map();
   for (const u of d.users || []) if (u.id !== d.me.id) S.users.set(u.id, u);
   S.contacts = [...(d.contacts || [])];
   S.msgs = new Map();
@@ -1510,7 +1510,7 @@ function renderList() {
   $$('[data-tab-list]').forEach(b => { const on = b.dataset.tabList === (S.tab || 'messages'); b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   if (S.tab === 'requests' && !q) return renderRequests(box, reqs.sort((a, b) => lastTs(b) - lastTs(a)));
   let ids = [...new Set(S.contacts)].filter(id => S.users.has(id));
-  ids.sort((a, b) => lastTs(b) - lastTs(a));
+  ids.sort((a, b) => (Number(S.pinnedUsers.includes(b)) - Number(S.pinnedUsers.includes(a))) || lastTs(b) - lastTs(a));
   if (q) ids = ids.filter(id => { const u = S.users.get(id); return u.username.includes(q) || (u.displayName || '').toLowerCase().includes(q); });
   let h = '';
   if (ids.length) {
@@ -1521,7 +1521,7 @@ function renderList() {
       h += `<button class="convo${S.active === id ? ' active' : ''}${un.length ? ' unread' : ''}" data-open="${id}">
         ${avatarHTML(u, 44)}
         <span class="convo-main">
-          <span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
+          <span class="convo-top"><span class="convo-name">${S.pinnedUsers.includes(id) ? '📌 ' : ''}${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
           <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || 'Start a conversation'))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
         </span></button>`;
     }
@@ -2712,6 +2712,19 @@ function showProfile(id, anchor, side) {
   Float.open(el, anchor, { side: side || 'right' });
 }
 
+function togglePinnedUser(id) {
+  S.pinnedUsers = S.pinnedUsers.includes(id) ? S.pinnedUsers.filter(x => x !== id) : [id, ...S.pinnedUsers];
+  ls.set('bc.pinned.' + S.me.id, S.pinnedUsers); renderList();
+  toast(S.pinnedUsers.includes(id) ? 'User pinned to the top' : 'User unpinned');
+}
+async function removeFriend(id) {
+  const u = getUser(id);
+  if (!S.contacts.includes(id)) return toast('This person is not in your friends list.', true);
+  if (!(await confirmBox({ title: 'Remove ' + u.displayName + '?', body: 'This removes the connection for both of you and permanently clears the conversation history on both sides. You will need a new accepted friend request to reconnect.', ok: 'Remove' }))) return;
+  try { await S.backend.removeContact(id); S.contacts = S.contacts.filter(x => x !== id); S.msgs.delete(id); S.drafts.delete(id); S.pinnedUsers = S.pinnedUsers.filter(x => x !== id); ls.set('bc.pinned.' + S.me.id, S.pinnedUsers); if (S.active === id) { closeChatUI(); S.active = null; showEmpty(); } renderList(); toast('Removed ' + u.displayName + ' and cleared the conversation'); }
+  catch (err) { toast(err.message, true); }
+}
+
 /* ---------- desktop context menu ---------- */
 const BCContextMenu = (() => {
   let node = null;
@@ -2741,11 +2754,13 @@ const BCContextMenu = (() => {
     e.preventDefault();
     if (row) {
       const id = row.dataset.open, u = getUser(id);
+      const pinned = S.pinnedUsers.includes(id);
       open(e.clientX, e.clientY, [
         { label: 'Open conversation', run: () => openChat(id) },
         { label: 'View profile', run: () => showProfile(id, row) },
+        { label: pinned ? 'Unpin user' : '📌 Pin user', run: () => togglePinnedUser(id) },
         { separator: true },
-        { label: 'Friend options', run: () => showProfile(id, row) }
+        { label: 'Remove friend…', danger: true, run: () => removeFriend(id) }
       ]);
     } else {
       const id = msg.dataset.id, m = (S.msgs.get(S.active) || []).find(v => v.id === id);
