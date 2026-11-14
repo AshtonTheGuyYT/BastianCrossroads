@@ -2742,7 +2742,7 @@ async function openAddModal(prefill = '') {
   };
   try {
     const list = (await S.backend.search('')).filter(u => u.id !== S.me.id && !S.contacts.includes(u.id)).slice(0, 6);
-    $('#sugg', m).innerHTML = list.length ? list.map(u => `<div class="person-row">${avatarHTML(u, 38)}<div class="who"><b>${esc(u.displayName)}</b><span>@</span></div><button class="btn sm ghost" data-name="${esc(u.username)}">Add</button></div>`).join('') : '<div class="hint">Everyone you might know is already on your list.</div>';
+    $('#sugg', m).innerHTML = list.length ? list.map(u => `<div class="person-row">${avatarHTML(u, 38)}<div class="who"><b>${esc(u.displayName)}</b><span></span></div><button class="btn sm ghost" data-name="${esc(u.username)}">Add</button></div>`).join('') : '<div class="hint">Everyone you might know is already on your list.</div>';
     $('#sugg', m).onclick = async e => { const b = e.target.closest('[data-name]'); if (!b) return; b.disabled = true; try { await addPerson(b.dataset.name, false); b.closest('.person-row').remove(); } catch { b.disabled = false; } };
   } catch { $('#sugg', m).innerHTML = ''; }
 }
