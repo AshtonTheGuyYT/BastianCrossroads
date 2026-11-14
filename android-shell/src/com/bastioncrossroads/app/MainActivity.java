@@ -444,7 +444,7 @@ public class MainActivity extends Activity {
 
     /** What the page can ask the app to do. Only our own pages are ever shown in this window. */
     private class Bridge {
-        @JavascriptInterface public String version() { return "3.3.0"; }
+        @JavascriptInterface public String version() { return "3.1.4"; }
         @JavascriptInterface public String state() { return mediaState(); }
         @JavascriptInterface public void request() { runOnUiThread(new Runnable() { public void run() { askMedia(); } }); }
         @JavascriptInterface public String list(int offset, int limit) {
