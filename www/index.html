@@ -1402,6 +1402,11 @@ function onEvent(e) {
       renderTyping(); renderList();
       break;
     }
+    case 'readReceiptClear': {
+      delete S.readBy[e.from];
+      if (S.active === e.from) renderMessages();
+      break;
+    }
     case 'readReceipt': {
       if (!S.contacts.includes(e.from) || !Number.isFinite(e.ts)) break;
       S.readBy[e.from] = Math.max(S.readBy[e.from] || 0, e.ts);
