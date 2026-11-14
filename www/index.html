@@ -1521,7 +1521,7 @@ function renderList() {
         ${avatarHTML(u, 44)}
         <span class="convo-main">
           <span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
-          <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || '@' + u.username))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
+          <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || 'Start a conversation'))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
         </span></button>`;
     }
   }
@@ -1850,7 +1850,7 @@ function renderMessages() {
   const box = $('#messages'), p = S.active; if (!p) return;
   const keepTop = box.scrollTop;
   const u = getUser(p), arr = S.msgs.get(p) || [];
-  let h = `<div class="intro">${avatarHTML(u, 84, false)}<h2>${esc(u.displayName || u.username)}</h2><p>This is the start of your conversation with <b>@${esc(u.username)}</b>. Everything you share here stays between the two of you.</p></div>`;
+  let h = `<div class="intro">${avatarHTML(u, 84, false)}<h2>${esc(u.displayName || u.username)}</h2><p>This is the start of your conversation with <b>${esc(u.displayName || 'this person')}</b>. Everything you share here stays between the two of you.</p></div>`;
   let prev = null;
   for (const m of arr) {
     if (!prev || dayKey(prev.ts) !== dayKey(m.ts)) { h += `<div class="day" role="separator">${dayLabel(m.ts)}</div>`; prev = null; }
