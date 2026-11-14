@@ -1364,7 +1364,7 @@ function onEvent(e) {
       break;
     }
     case 'contacts': S.contacts = e.contacts; renderList(); break;
-    case 'convoRemoved': { const p = e.peer; S.msgs.delete(p); S.drafts.delete(p); S.lastRead[p] = 0; delete S.lastRead[p]; ls.set('bc.read.' + S.me.id, S.lastRead); S.typing.delete(p); if (S.active === p) { closeChatUI(); S.active = null; showEmpty(); } renderList(); updateTitle(); break; }
+    case 'convoRemoved': { const p = e.peer; S.msgs.delete(p); S.drafts.delete(p); delete S.readBy[p]; S.lastRead[p] = 0; delete S.lastRead[p]; ls.set('bc.read.' + S.me.id, S.lastRead); S.typing.delete(p); if (S.active === p) { closeChatUI(); S.active = null; showEmpty(); } renderList(); updateTitle(); break; }
     case 'friendRequests': S.friendRequests = e.data || { incoming: [], outgoing: [] }; renderFriendsRequests(); break;
     case 'msg': {
       const m = e.msg, p = peerOf(m);
