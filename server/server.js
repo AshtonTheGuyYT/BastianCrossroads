@@ -465,7 +465,7 @@ async function handle(ws, me, d) {
     case 'search': {
       if (!ws.misc.take()) return ok([]);
       const q = sec.str(d.q, 40).toLowerCase().replace(/^@/, '').trim();
-      let list = Object.values(db.users).filter(u => u.id !== me.id && !blocked(u.id, me.id) && (!q || u.username.includes(q) || u.displayName.toLowerCase().includes(q)));
+      let list = Object.values(db.users).filter(u => u.id !== me.id && !blocked(u.id, me.id) && !blocked(me.id, u.id) && (!q || u.username.includes(q) || u.displayName.toLowerCase().includes(q)));
       list.sort((a, b) => (b.username.startsWith(q) - a.username.startsWith(q)) || b.createdAt - a.createdAt);
       return ok(list.slice(0, 20).map(u => pub(u, me.id)));
     }
@@ -476,7 +476,7 @@ async function handle(ws, me, d) {
       if (!u || blocked(u.id, me.id)) return no('No matching person was found. Check the spelling and try again.');
       if (u.id === me.id) return no('That is you. Add someone else.');
       if (accepted(me.id, u.id) && accepted(u.id, me.id)) return ok({ ...pub(u, me.id), requestState: 'friends' });
-      if (accepted(me.id, u.id)) return ok({ ...pub(u, me.id), requestState: 'friends' });
+      if (accepted(me.id, u.id)) { addContact(u.id, me.id); broadcastUser(me); broadcastUser(u); sendTo(me.id, { t: 'contacts', contacts: db.contacts[me.id] || [] }); sendTo(u.id, { t: 'contacts', contacts: db.contacts[u.id] || [] }); return ok({ ...pub(u, me.id), requestState: 'friends' }); }
       const incoming = db.friendRequests[me.id] || {};
       if (incoming[u.id]) {
         addContact(me.id, u.id); addContact(u.id, me.id);
