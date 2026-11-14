@@ -1527,7 +1527,7 @@ function renderList() {
     const others = S.dirResults.filter(u => u.id !== S.me.id && !S.contacts.includes(u.id));
     if (others.length) {
       h += `<div class="list-label"><span>Other people</span></div>`;
-      for (const u of others) h += `<div class="person-row">${avatarHTML(u, 40)}<div class="who"><b>${esc(u.displayName)}</b><span>@${esc(u.username)}</span></div><button class="btn sm" data-add="${esc(u.username)}">${ic('userPlus')}Add</button></div>`;
+      for (const u of others) h += `<div class="person-row">${avatarHTML(u, 40)}<div class="who"><b>${esc(u.displayName)}</b><span>${isMe ? "@" + esc(u.username) : ""}</span></div><button class="btn sm" data-add="${esc(u.username)}">${ic('userPlus')}Add</button></div>`;
     }
     if (!ids.length && !others.length) h += `<div class="list-empty">No one matches “${esc(S.query)}”.<br><button class="btn ghost sm" data-addprompt="${esc(q)}">Add @${esc(q)}</button></div>`;
   } else if (!ids.length) {
@@ -2657,6 +2657,7 @@ function openEmoji(anchor, onPick, title = 'Emoji') {
    Profile card (the user popup)
    ========================================================= */
 function bannerStyle(u) { return u.banner ? `--b:url('${u.banner}')` : `--b:linear-gradient(135deg,${u.bannerColor || u.accent || '#3A4658'},color-mix(in srgb,${u.bannerColor || u.accent || '#3A4658'} 55%,#000))`; }
+function mutualsHTML(u) { const list = Array.isArray(u.mutuals) ? u.mutuals : []; if (!list.length) return ''; return '<div class="pcard-sec"><h4>' + list.length + ' mutual ' + (list.length === 1 ? 'friend' : 'friends') + '</h4><div class="mutuals-row">' + list.map(m => '<span class="mutual-person" title="' + esc(m.displayName) + '">' + (m.avatar ? '<img src="' + esc(m.avatar) + '" alt="">' : '<span>' + esc(initials(m.displayName)) + '</span>') + '</span>').join('') + '</div><p class="hint">' + list.map(m => esc(m.displayName)).join(', ') + '</p></div>'; }
 function profileCardHTML(u, { preview = false } = {}) {
   const isMe = u.id === S.me.id, st = statusOf(u);
   const since = u.createdAt ? new Date(u.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : null;
@@ -2671,6 +2672,7 @@ function profileCardHTML(u, { preview = false } = {}) {
     <div class="pcard-body" style="--accent-local:${esc(u.accent || '')}">
       <div class="pcard-name">${emoEsc(u.displayName || u.username)}</div>
       <div class="pcard-handle"><span>@${esc(u.username)}</span>${u.pronouns ? `<span class="pill">${esc(u.pronouns)}</span>` : ''}</div>
+      ${mutualsHTML(u)}
       ${u.customStatus ? `<div class="pcard-status">${emoEsc(u.customStatus)}</div>` : ''}
       ${u.bio ? `<div class="pcard-sec"><h4>About</h4><p>${fmt(u.bio)}</p></div>` : (isMe && !preview ? `<div class="pcard-sec"><h4>About</h4><p style="color:var(--muted)">Add a bio so people know who they are talking to.</p></div>` : '')}
       ${since ? `<div class="pcard-sec"><h4>Member since</h4><p>${since}</p></div>` : ''}
