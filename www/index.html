@@ -2019,7 +2019,7 @@ const Picker = {
     this.open = true; this.items = []; this.sel.clear(); this.done = false; this.loading = false; this.busy = false; this.expanded = false;
     const el = this.el();
     el.innerHTML = `<div class="pk-grab" id="pkGrab" aria-hidden="true"><i></i></div>
-      <div class="pk-head" id="pkHead"><b>Recent</b><button class="btn ghost sm" data-pk="files">${ic('folder')}Browse files</button><button class="icon-btn" data-pk="close" aria-label="Close">${ic('x')}</button></div>
+      <div class="pk-head" id="pkHead"><b>Recent</b>${NATIVE ? `<button class="btn ghost sm" data-pk="camera">${ic('camera')}Camera</button>` : ''}<button class="btn ghost sm" data-pk="files">${ic('folder')}Browse files</button><button class="icon-btn" data-pk="close" aria-label="Close">${ic('x')}</button></div>
       <div class="pk-body" id="pkBody"></div>
       <div class="pk-foot" id="pkFoot" hidden><span id="pkCount"></span><button class="btn sm" data-pk="add">Add</button></div>`;
     this.setH(this.sizes().peek);
@@ -2105,6 +2105,16 @@ const Picker = {
     const files = await chooseFiles({ multiple: true });
     if (files.length) addFiles(files);
   },
+  async capture() {
+    this.close();
+    if (!NATIVE || !window.BastionNative.capturePhoto) return toast("Camera capture is available in the Android app.");
+    const files = await new Promise(resolve => {
+      if (Native.pending) Native.pending([]);
+      Native.pending = resolve;
+      try { BastionNative.capturePhoto(); } catch { Native.pending = null; resolve([]); }
+    });
+    if (files.length) await addFiles(files);
+  },
   wire(el) {
     el.addEventListener('click', e => {
       const b = e.target.closest('[data-pk]');
@@ -2112,6 +2122,7 @@ const Picker = {
         const a = b.dataset.pk;
         if (a === 'close') this.close();
         else if (a === 'files') this.browse();
+        else if (a === 'camera') this.capture();
         else if (a === 'add') this.commit();
         else if (a === 'allow') { if (this.state === 'denied') { if (this.asked) this.askedTwice = true; this.asked = true; } this.waiting = this.state === 'denied'; this.render(); BastionNative.request(); }
         else if (a === 'settings') BastionNative.settings();
