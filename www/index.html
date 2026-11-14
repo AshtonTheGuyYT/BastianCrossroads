@@ -1106,7 +1106,7 @@ class LocalBackend {
     if (!c.includes(u.id)) { c.unshift(u.id); await DB.put('kv', c, 'contacts'); }
     return u;
   }
-  async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); }
+  async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); const all = await DB.getAll('messages'); for (const m of all) if (m.peer === id || m.from === id || m.to === id) { for (const a of m.attachments || []) await DB.del('files', a.id).catch(() => {}); await DB.del('messages', m.id); } emit({ t: 'convoRemoved', peer: id }); }
   async respondFriendRequest(id, accept) { const c = (await DB.get('kv', 'contacts')) || []; if (accept && !c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const f = (await DB.get('kv', 'friendRequests')) || { incoming: [], outgoing: [] }; f.incoming = (f.incoming || []).filter(x => x.id !== id); await DB.put('kv', f, 'friendRequests'); return { accepted: !!accept, user: DEMO_USERS.find(x => x.id === id) }; }
 
   async accept(id) { const c = (await DB.get('kv', 'contacts')) || []; if (!c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const d = (await DB.get('kv', 'declined')) || {}; delete d[id]; await DB.put('kv', d, 'declined'); return DEMO_USERS.find(u => u.id === id); }
@@ -1363,6 +1363,7 @@ function onEvent(e) {
       break;
     }
     case 'contacts': S.contacts = e.contacts; renderList(); break;
+    case 'convoRemoved': { const p = e.peer; S.msgs.delete(p); S.drafts.delete(p); S.lastRead[p] = 0; delete S.lastRead[p]; ls.set('bc.read.' + S.me.id, S.lastRead); S.typing.delete(p); if (S.active === p) { closeChatUI(); S.active = null; showEmpty(); } renderList(); updateTitle(); break; }
     case 'friendRequests': S.friendRequests = e.data || { incoming: [], outgoing: [] }; renderFriendsRequests(); break;
     case 'msg': {
       const m = e.msg, p = peerOf(m);
@@ -2703,8 +2704,8 @@ function showProfile(id, anchor, side) {
     }
     else if (a === 'remove') {
       Float.close();
-      if (await confirmBox({ title: `Remove ${u.displayName}?`, body: `They will leave your list. Your conversation history stays, and it comes back if either of you sends a message.`, ok: 'Remove' })) {
-        try { await S.backend.removeContact(u.id); S.contacts = S.contacts.filter(x => x !== u.id); if (S.active === u.id) { closeChat(); S.active = null; showEmpty(); } renderList(); toast(`Removed ${u.displayName} from your list`); } catch (err) { toast(err.message, true); }
+      if (await confirmBox({ title: `Remove ${u.displayName}?`, body: `This removes the connection for both of you and permanently clears the conversation history on both sides. You'll need to send and accept a new friend request to reconnect.`, ok: 'Remove' })) {
+        try { await S.backend.removeContact(u.id); S.contacts = S.contacts.filter(x => x !== u.id); S.msgs.delete(u.id); S.drafts.delete(u.id); if (S.active === u.id) { closeChatUI(); S.active = null; showEmpty(); } renderList(); toast(`Removed ${u.displayName} and cleared the conversation`); } catch (err) { toast(err.message, true); }
       }
     }
   });
