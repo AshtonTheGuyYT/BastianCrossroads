@@ -1106,7 +1106,7 @@ class LocalBackend {
     if (!c.includes(u.id)) { c.unshift(u.id); await DB.put('kv', c, 'contacts'); }
     return u;
   }
-  async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); const all = await DB.getAll('messages'); for (const m of all) if (m.peer === id || m.from === id || m.to === id) { for (const a of m.attachments || []) await DB.del('files', a.id).catch(() => {}); await DB.del('messages', m.id); } emit({ t: 'convoRemoved', peer: id }); }
+  async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); const all = await DB.all('messages'); for (const m of all) if (m.peer === id || m.from === id || m.to === id) { for (const a of m.attachments || []) await DB.del('files', a.id).catch(() => {}); await DB.del('messages', m.id); } emit({ t: 'convoRemoved', peer: id }); }
   async respondFriendRequest(id, accept) { const c = (await DB.get('kv', 'contacts')) || []; if (accept && !c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const f = (await DB.get('kv', 'friendRequests')) || { incoming: [], outgoing: [] }; f.incoming = (f.incoming || []).filter(x => x.id !== id); await DB.put('kv', f, 'friendRequests'); return { accepted: !!accept, user: DEMO_USERS.find(x => x.id === id) }; }
 
   async accept(id) { const c = (await DB.get('kv', 'contacts')) || []; if (!c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const d = (await DB.get('kv', 'declined')) || {}; delete d[id]; await DB.put('kv', d, 'declined'); return DEMO_USERS.find(u => u.id === id); }
