@@ -473,7 +473,7 @@ async function handle(ws, me, d) {
       if (!ws.misc.take()) return no('You are sending friend requests too quickly. Wait a moment.');
       const name = sec.str(d.username, 30).toLowerCase().replace(/^@/, '').trim();
       const u = byName(name);
-      if (!u || blocked(u.id, me.id)) return no('No matching person was found. Check the spelling and try again.');
+      if (!u || blocked(u.id, me.id) || blocked(me.id, u.id)) return no('No matching person was found. Check the spelling and try again.');
       if (u.id === me.id) return no('That is you. Add someone else.');
       if (accepted(me.id, u.id) && accepted(u.id, me.id)) return ok({ ...pub(u, me.id), requestState: 'friends' });
       if (accepted(me.id, u.id)) { addContact(u.id, me.id); broadcastUser(me); broadcastUser(u); sendTo(me.id, { t: 'contacts', contacts: db.contacts[me.id] || [] }); sendTo(u.id, { t: 'contacts', contacts: db.contacts[u.id] || [] }); return ok({ ...pub(u, me.id), requestState: 'friends' }); }
