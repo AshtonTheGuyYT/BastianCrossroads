@@ -1106,7 +1106,7 @@ class LocalBackend {
     if (!c.includes(u.id)) { c.unshift(u.id); await DB.put('kv', c, 'contacts'); }
     return u;
   }
-  async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); }
+  async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); const all = await DB.all('messages'); for (const m of all) if (m.peer === id || m.from === id || m.to === id) { for (const a of m.attachments || []) await DB.del('files', a.id).catch(() => {}); await DB.del('messages', m.id); } emit({ t: 'convoRemoved', peer: id }); }
   async respondFriendRequest(id, accept) { const c = (await DB.get('kv', 'contacts')) || []; if (accept && !c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const f = (await DB.get('kv', 'friendRequests')) || { incoming: [], outgoing: [] }; f.incoming = (f.incoming || []).filter(x => x.id !== id); await DB.put('kv', f, 'friendRequests'); return { accepted: !!accept, user: DEMO_USERS.find(x => x.id === id) }; }
 
   async accept(id) { const c = (await DB.get('kv', 'contacts')) || []; if (!c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const d = (await DB.get('kv', 'declined')) || {}; delete d[id]; await DB.put('kv', d, 'declined'); return DEMO_USERS.find(u => u.id === id); }
@@ -1363,6 +1363,7 @@ function onEvent(e) {
       break;
     }
     case 'contacts': S.contacts = e.contacts; renderList(); break;
+    case 'convoRemoved': { const p = e.peer; S.msgs.delete(p); S.drafts.delete(p); S.lastRead[p] = 0; delete S.lastRead[p]; ls.set('bc.read.' + S.me.id, S.lastRead); S.typing.delete(p); if (S.active === p) { closeChatUI(); S.active = null; showEmpty(); } renderList(); updateTitle(); break; }
     case 'friendRequests': S.friendRequests = e.data || { incoming: [], outgoing: [] }; renderFriendsRequests(); break;
     case 'msg': {
       const m = e.msg, p = peerOf(m);
@@ -2703,13 +2704,68 @@ function showProfile(id, anchor, side) {
     }
     else if (a === 'remove') {
       Float.close();
-      if (await confirmBox({ title: `Remove ${u.displayName}?`, body: `They will leave your list. Your conversation history stays, and it comes back if either of you sends a message.`, ok: 'Remove' })) {
-        try { await S.backend.removeContact(u.id); S.contacts = S.contacts.filter(x => x !== u.id); if (S.active === u.id) { closeChat(); S.active = null; showEmpty(); } renderList(); toast(`Removed ${u.displayName} from your list`); } catch (err) { toast(err.message, true); }
+      if (await confirmBox({ title: `Remove ${u.displayName}?`, body: `This removes the connection for both of you and permanently clears the conversation history on both sides. You'll need to send and accept a new friend request to reconnect.`, ok: 'Remove' })) {
+        try { await S.backend.removeContact(u.id); S.contacts = S.contacts.filter(x => x !== u.id); S.msgs.delete(u.id); S.drafts.delete(u.id); if (S.active === u.id) { closeChatUI(); S.active = null; showEmpty(); } renderList(); toast(`Removed ${u.displayName} and cleared the conversation`); } catch (err) { toast(err.message, true); }
       }
     }
   });
   Float.open(el, anchor, { side: side || 'right' });
 }
+
+/* ---------- desktop context menu ---------- */
+const BCContextMenu = (() => {
+  let node = null;
+  const close = () => { node?.remove(); node = null; };
+  function open(x, y, items) {
+    close();
+    node = document.createElement('div');
+    node.className = 'bc-context-menu';
+    node.setAttribute('role', 'menu');
+    for (const item of items) {
+      if (item.separator) { const sep = document.createElement('div'); sep.className = 'bc-context-sep'; node.append(sep); continue; }
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'bc-context-item' + (item.danger ? ' danger' : '');
+      b.setAttribute('role', 'menuitem'); b.textContent = item.label;
+      b.addEventListener('click', () => { close(); item.run(); });
+      node.append(b);
+    }
+    document.body.append(node);
+    const w = node.offsetWidth, h = node.offsetHeight;
+    node.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
+    node.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px';
+  }
+  document.addEventListener('contextmenu', e => {
+    const row = e.target.closest('.convo[data-open]');
+    const msg = e.target.closest('.msg[data-id]');
+    if (!row && !msg) return;
+    e.preventDefault();
+    if (row) {
+      const id = row.dataset.open, u = getUser(id);
+      open(e.clientX, e.clientY, [
+        { label: 'Open conversation', run: () => openChat(id) },
+        { label: 'View profile', run: () => showProfile(id, row) },
+        { separator: true },
+        { label: 'Friend options', run: () => showProfile(id, row) }
+      ]);
+    } else {
+      const id = msg.dataset.id, m = (S.msgs.get(S.active) || []).find(v => v.id === id);
+      if (!m) return;
+      const items = [
+        { label: 'Reply', run: () => setReply(id) },
+        ...(m.text ? [{ label: 'Copy message', run: () => copyMsg(id) }] : [])
+      ];
+      if (m.from === S.me.id) items.push({ separator: true }, { label: 'Delete message…', danger: true, run: () => deleteMsg(id) });
+      open(e.clientX, e.clientY, items);
+    }
+  });
+  document.addEventListener('pointerdown', e => { if (node && !node.contains(e.target)) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  window.addEventListener('scroll', close, true);
+  const style = document.createElement('style');
+  style.textContent = '.bc-context-menu{position:fixed;z-index:10000;min-width:190px;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:9px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
+  document.head.append(style);
+  return { close };
+})();
 
 /* =========================================================
    Add person
