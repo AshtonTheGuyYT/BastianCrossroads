@@ -1095,6 +1095,9 @@ class LocalBackend {
     q = q.trim().toLowerCase().replace(/^@/, '');
     return DEMO_USERS.filter(u => !q || u.username.includes(q) || u.displayName.toLowerCase().includes(q));
   }
+  async addContact(username) { return this.rpc('add', { username }); }
+  async respondFriendRequest(id, accept) { return this.rpc('friendRespond', { id, accept }); }
+  async cancelFriendRequest(id) { return this.rpc('cancelFriendRequest', { id }); }
   async addContact(username) {
     username = username.trim().toLowerCase().replace(/^@/, '');
     if (username === S.me.username) throw new Error('That is you. Add someone else by their username.');
@@ -1184,7 +1187,7 @@ class ServerBackend {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.t === 'hello') {
         helloed = true; this.retry = 0; setConn(true);
-        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
+        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, friendRequests: d.friendRequests || { incoming: [], outgoing: [] }, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
         if (onHello) { const f = onHello; onHello = null; onFail = null; f(data); } else emit({ t: 'resync', data });
         return;
       }
@@ -1306,7 +1309,7 @@ function showWaking() {
    App state
    ========================================================= */
 const S = {
-  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {},
+  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
   settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
@@ -1345,6 +1348,7 @@ function loadSnapshot(d) {
   if (Object.keys(push).length) S.backend?.markRead?.(push);
   S.blocked = d.blocked || [];
   S.declined = d.declined || {};
+  S.friendRequests = d.friendRequests || { incoming: [], outgoing: [] };
 }
 function onEvent(e) {
   switch (e.t) {
@@ -1356,6 +1360,7 @@ function onEvent(e) {
       break;
     }
     case 'contacts': S.contacts = e.contacts; renderList(); break;
+    case 'friendRequests': S.friendRequests = e.data || { incoming: [], outgoing: [] }; renderFriendsRequests(); break;
     case 'msg': {
       const m = e.msg, p = peerOf(m);
       if (e.user) S.users.set(e.user.id, { ...(S.users.get(e.user.id) || {}), ...e.user });
@@ -2702,10 +2707,10 @@ async function addPerson(username, open) {
   try {
     const u = await S.backend.addContact(username);
     S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u });
-    if (!S.contacts.includes(u.id)) S.contacts.unshift(u.id);
+    if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id);
     S.query = ''; $('#search').value = ''; S.dirResults = [];
-    renderList(); toast(`Added ${u.displayName}`);
-    if (open) openChat(u.id);
+    renderList(); renderFriendsRequests(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`);
+    if (open && u.requestState === 'friends') openChat(u.id);
     return u;
   } catch (e) { toast(e.message, true); throw e; }
 }
@@ -2720,12 +2725,12 @@ async function openAddModal(prefill = '') {
   $('#addForm', m).onsubmit = async e => {
     e.preventDefault(); const v = inp.value.trim(); if (!v) { $('#addErr', m).textContent = 'Enter a username.'; return; }
     $('#addGo', m).disabled = true;
-    try { const u = await S.backend.addContact(v); S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u }); if (!S.contacts.includes(u.id)) S.contacts.unshift(u.id); renderList(); Modal.close(); toast(`Added ${u.displayName}`); openChat(u.id); }
+    try { const u = await S.backend.addContact(v); S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u }); if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id); renderList(); renderFriendsRequests(); Modal.close(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`); if (u.requestState === 'friends') openChat(u.id); }
     catch (err) { $('#addErr', m).textContent = err.message; $('#addGo', m).disabled = false; }
   };
   try {
     const list = (await S.backend.search('')).filter(u => u.id !== S.me.id && !S.contacts.includes(u.id)).slice(0, 6);
-    $('#sugg', m).innerHTML = list.length ? list.map(u => `<div class="person-row">${avatarHTML(u, 38)}<div class="who"><b>${esc(u.displayName)}</b><span>@${esc(u.username)}</span></div><button class="btn sm ghost" data-name="${esc(u.username)}">Add</button></div>`).join('') : '<div class="hint">Everyone you might know is already on your list.</div>';
+    $('#sugg', m).innerHTML = list.length ? list.map(u => `<div class="person-row">${avatarHTML(u, 38)}<div class="who"><b>${esc(u.displayName)}</b><span>@</span></div><button class="btn sm ghost" data-name="${esc(u.username)}">Add</button></div>`).join('') : '<div class="hint">Everyone you might know is already on your list.</div>';
     $('#sugg', m).onclick = async e => { const b = e.target.closest('[data-name]'); if (!b) return; b.disabled = true; try { await addPerson(b.dataset.name, false); b.closest('.person-row').remove(); } catch { b.disabled = false; } };
   } catch { $('#sugg', m).innerHTML = ''; }
 }
