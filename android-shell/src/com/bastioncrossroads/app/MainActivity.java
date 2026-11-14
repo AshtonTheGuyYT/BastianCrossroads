@@ -101,7 +101,7 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);                   // needed for picked attachments
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setSupportMultipleWindows(false);
-        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.1.4 Android");
+        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.4.1 Android");
         CookieManager.getInstance().setAcceptCookie(true);
 
         web.addJavascriptInterface(new Bridge(), "BastionNative");
@@ -449,7 +449,7 @@ public class MainActivity extends Activity {
 
     /** What the page can ask the app to do. Only our own pages are ever shown in this window. */
     private class Bridge {
-        @JavascriptInterface public String version() { return "3.1.4"; }
+        @JavascriptInterface public String version() { return "3.4.1"; }
         @JavascriptInterface public String state() { return mediaState(); }
         @JavascriptInterface public void request() { runOnUiThread(new Runnable() { public void run() { askMedia(); } }); }
         @JavascriptInterface public String list(int offset, int limit) {

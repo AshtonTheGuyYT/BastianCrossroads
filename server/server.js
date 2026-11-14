@@ -64,7 +64,7 @@ const sec = require('./security');
 const { createStore, convoKey } = require('./store');
 const { createFiles } = require('./files');
 
-const VERSION = '3.1.4';
+const VERSION = '3.4.1';
 const ENV = process.env;
 const GB = 1024 ** 3;
 const PORT = +ENV.PORT || 8787;
@@ -117,7 +117,7 @@ function pub(u, viewer) {
   const status = !(shareStatus && accepted(viewer, u.id)) || !online(u.id) || u.status === 'invisible' ? 'offline' : (u.status || 'online');
   return { acceptedYou: viewer ? accepted(u.id, viewer) : undefined, id: u.id, username: u.username, displayName: u.displayName, bio: u.bio || '', pronouns: u.pronouns || '', avatar: u.avatar || null, banner: u.banner || null, bannerColor: u.bannerColor || '#3A4658', accent: u.accent || '#E9B44C', status, customStatus: u.customStatus || '', createdAt: u.createdAt, mutuals: mutualUsers(u.id, viewer) };
 }
-const self = u => ({ ...pub(u), status: u.status || 'online' });
+const self = u => ({ ...pub(u), status: u.status || 'online', readReceipts: u.readReceipts !== false });
 function sendTo(uid, obj) { const s = sockets.get(uid); if (!s) return; const d = JSON.stringify(obj); for (const ws of s) if (ws.readyState === 1 && ws.authed) ws.send(d); }
 function watchers(uid) {
   const out = new Set();
@@ -434,7 +434,7 @@ function onAuthed(ws, s) {
     const peer = a === me.id ? b : a; people.add(peer);
     convos[peer] = list.slice(-HISTORY_SENT).map(withFiles);
   }
-  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, friendRequests: { incoming: Object.entries(db.friendRequests[me.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], me.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[me.id]).map(([owner]) => owner) }, reads: db.reads[me.id] || {}, limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
+  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, friendRequests: { incoming: Object.entries(db.friendRequests[me.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], me.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[me.id]).map(([owner]) => owner) }, reads: db.reads[me.id] || {}, readBy: Object.fromEntries(contacts.filter(peer => accepted(me.id, peer) && accepted(peer, me.id) && db.users[peer]?.readReceipts !== false).map(peer => [peer, db.reads[peer]?.[me.id] || 0])), limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
   if (!wasOnline) broadcastUser(me);
 }
 const reply = (ws, rid, ok, data) => ws.readyState === 1 && rid && ws.send(JSON.stringify({ t: 'res', rid, ok, ...(ok ? { data } : { error: data }) }));
@@ -461,6 +461,18 @@ async function handle(ws, me, d) {
         status: ['online', 'idle', 'dnd', 'invisible'].includes(p.status) ? p.status : me.status
       });
       store.saveUser(me); broadcastUser(me); return ok(self(me));
+    }
+    case 'prefs': {
+      if (!ws.misc.take()) return no('You are changing privacy settings too quickly. Wait a moment.');
+      const p = d.prefs && typeof d.prefs === 'object' ? d.prefs : {};
+      if (typeof p.readReceipts === 'boolean' && p.readReceipts !== (me.readReceipts !== false)) {
+        // When re-enabling, discard reads made while receipts were disabled so they cannot be revealed retroactively.
+        if (p.readReceipts) { db.reads[me.id] = {}; store.setReads(me.id, db.reads[me.id]); }
+        me.readReceipts = p.readReceipts;
+        if (!p.readReceipts) for (const peer of db.contacts[me.id] || []) sendTo(peer, { t: 'readReceiptClear', from: me.id });
+      }
+      store.saveUser(me);
+      return ok(self(me));
     }
     case 'search': {
       if (!ws.misc.take()) return ok([]);
@@ -609,12 +621,13 @@ async function handle(ws, me, d) {
       const mine = (db.reads[me.id] ||= {}), changed = {};
       for (const [peer, raw] of Object.entries(marks).slice(0, 200)) {
         const ts = Math.min(Math.floor(Number(raw)), Date.now());
-        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)]) continue;
+        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)] || !accepted(me.id, peer) || !accepted(peer, me.id)) continue;
         if (ts > (mine[peer] || 0)) { mine[peer] = ts; changed[peer] = ts; }
       }
       if (Object.keys(changed).length) {
         saveReadsSoon(me.id);
         for (const o of sockets.get(me.id) || []) if (o !== ws && o.readyState === 1 && o.authed) o.send(JSON.stringify({ t: 'read', marks: changed }));
+        if (me.readReceipts !== false) for (const [peer, ts] of Object.entries(changed)) sendTo(peer, { t: 'readReceipt', from: me.id, ts });
       }
       return ok(true);
     }

@@ -715,7 +715,7 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
 /* =========================================================
    Bastion Crossroads — client
    ========================================================= */
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.4.1';
 /* ---------------------------------------------------------
    YOUR SERVER: put your hosted server address here, e.g.
    const DEFAULT_SERVER = 'https://bastion-crossroads.onrender.com';
@@ -1188,7 +1188,7 @@ class ServerBackend {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.t === 'hello') {
         helloed = true; this.retry = 0; setConn(true);
-        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, friendRequests: d.friendRequests || { incoming: [], outgoing: [] }, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
+        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, friendRequests: d.friendRequests || { incoming: [], outgoing: [] }, reads: d.reads, readBy: d.readBy || {}, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
         if (onHello) { const f = onHello; onHello = null; onFail = null; f(data); } else emit({ t: 'resync', data });
         return;
       }
@@ -1279,6 +1279,7 @@ class ServerBackend {
     }, 30);
     return p;
   }
+  setPrefs(prefs) { return this.rpc('prefs', { prefs }); }
   async signOut() { try { await fetch(this.base + '/api/logout', { method: 'POST', headers: { authorization: 'Bearer ' + this.token } }); } catch {} this.close(); }
   close() { this.closed = true; try { this.ws?.close(); } catch {} }
 }
@@ -1312,10 +1313,10 @@ function showWaking() {
    App state
    ========================================================= */
 const S = {
-  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, friendRequests: { incoming: [], outgoing: [] },
+  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, readBy: {}, pinnedUsers: [], mutedUsers: [], friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
-  settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
+  settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime', quietHours: false, quietStart: '22:00', quietEnd: '07:00' }, ls.get('bc.settings', {}))
 };
 const saveSettings = () => ls.set('bc.settings', S.settings);
 const isPhone = () => document.body.classList.contains('phone');
@@ -1336,7 +1337,7 @@ function avatarHTML(u, s = 40, dot = true) {
 /* ---------- events from backends ---------- */
 function emit(e) { try { onEvent(e); } catch (err) { console.error(err); } }
 function loadSnapshot(d) {
-  S.me = d.me; S.users = new Map();
+  S.me = d.me; S.readBy = d.readBy || {}; S.pinnedUsers = ls.get('bc.pinned.' + S.me.id, []); S.mutedUsers = ls.get('bc.muted.' + S.me.id, []); S.users = new Map();
   for (const u of d.users || []) if (u.id !== d.me.id) S.users.set(u.id, u);
   S.contacts = [...(d.contacts || [])];
   S.msgs = new Map();
@@ -1363,7 +1364,7 @@ function onEvent(e) {
       break;
     }
     case 'contacts': S.contacts = e.contacts; renderList(); break;
-    case 'convoRemoved': { const p = e.peer; S.msgs.delete(p); S.drafts.delete(p); S.lastRead[p] = 0; delete S.lastRead[p]; ls.set('bc.read.' + S.me.id, S.lastRead); S.typing.delete(p); if (S.active === p) { closeChatUI(); S.active = null; showEmpty(); } renderList(); updateTitle(); break; }
+    case 'convoRemoved': { const p = e.peer; S.msgs.delete(p); S.drafts.delete(p); delete S.readBy[p]; S.lastRead[p] = 0; delete S.lastRead[p]; ls.set('bc.read.' + S.me.id, S.lastRead); S.typing.delete(p); if (S.active === p) { closeChatUI(); S.active = null; showEmpty(); } renderList(); updateTitle(); break; }
     case 'friendRequests': S.friendRequests = e.data || { incoming: [], outgoing: [] }; renderFriendsRequests(); break;
     case 'msg': {
       const m = e.msg, p = peerOf(m);
@@ -1399,6 +1400,17 @@ function onEvent(e) {
       const p = e.from; clearTimeout(S.typing.get(p));
       S.typing.set(p, setTimeout(() => { S.typing.delete(p); renderTyping(); renderList(); }, 5000));
       renderTyping(); renderList();
+      break;
+    }
+    case 'readReceiptClear': {
+      delete S.readBy[e.from];
+      if (S.active === e.from) renderMessages();
+      break;
+    }
+    case 'readReceipt': {
+      if (!S.contacts.includes(e.from) || !Number.isFinite(e.ts)) break;
+      S.readBy[e.from] = Math.max(S.readBy[e.from] || 0, e.ts);
+      if (S.active === e.from) renderMessages();
       break;
     }
     case 'read': { // you read something on another device
@@ -1475,8 +1487,18 @@ let ringTimer = null;
 /** Ringtone for incoming calls: plays the chosen style's mention sound, twice, every 2.4 s until stopped. */
 function startRing() { stopRing(); const ring = () => { chime(true); setTimeout(() => ringTimer && chime(true), 700); }; ringTimer = setInterval(ring, 2400); ring(); try { navigator.vibrate?.([300, 200, 300]); } catch {} }
 function stopRing() { if (ringTimer) { clearInterval(ringTimer); ringTimer = null; } }
+function isQuietHours() {
+  if (!S.settings.quietHours) return false;
+  const toMinutes = v => { const [h, m] = String(v || '00:00').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+  const now = new Date(), current = now.getHours() * 60 + now.getMinutes();
+  const start = toMinutes(S.settings.quietStart), end = toMinutes(S.settings.quietEnd);
+  if (start === end) return true;
+  return start < end ? current >= start && current < end : current >= start || current < end;
+}
 function notifyIncoming(m, p) {
+  if (S.mutedUsers.includes(p)) return;
   const ment = mentionsMe(m.text), st = S.settings;
+  if (isQuietHours() && !ment) return;
   if (S.me.status === 'dnd' && !ment) return;
   if (st.mentionsOnly && !ment) return;
   if (st.sound) chime(ment);
@@ -1510,7 +1532,7 @@ function renderList() {
   $$('[data-tab-list]').forEach(b => { const on = b.dataset.tabList === (S.tab || 'messages'); b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   if (S.tab === 'requests' && !q) return renderRequests(box, reqs.sort((a, b) => lastTs(b) - lastTs(a)));
   let ids = [...new Set(S.contacts)].filter(id => S.users.has(id));
-  ids.sort((a, b) => lastTs(b) - lastTs(a));
+  ids.sort((a, b) => (Number(S.pinnedUsers.includes(b)) - Number(S.pinnedUsers.includes(a))) || lastTs(b) - lastTs(a));
   if (q) ids = ids.filter(id => { const u = S.users.get(id); return u.username.includes(q) || (u.displayName || '').toLowerCase().includes(q); });
   let h = '';
   if (ids.length) {
@@ -1521,7 +1543,7 @@ function renderList() {
       h += `<button class="convo${S.active === id ? ' active' : ''}${un.length ? ' unread' : ''}" data-open="${id}">
         ${avatarHTML(u, 44)}
         <span class="convo-main">
-          <span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
+          <span class="convo-top"><span class="convo-name">${S.pinnedUsers.includes(id) ? '📌 ' : ''}${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
           <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || 'Start a conversation'))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
         </span></button>`;
     }
@@ -1841,10 +1863,11 @@ function msgHTML(m, grouped) {
     body = `<div class="edit-wrap"><textarea class="inp edit-box" rows="2" aria-label="Edit message">${esc(S.editDraft ?? m.text)}</textarea><div class="hint" style="margin-top:6px">Enter to save, Esc to cancel. <button class="btn sm" data-act="edit-save">Save</button> <button class="btn ghost sm" data-act="edit-cancel">Cancel</button></div></div>`;
   } else body = m.text ? `<div class="msg-text${isJumbo(m.text) ? ' jumbo' : ''}">${fmt(m.text)}${m.editedAt ? `<span class="edited" title="Edited ${esc(timeFull(m.editedAt))}">(edited)</span>` : ''}</div>` : '';
   const atts = m.attachments?.length ? `<div class="atts">${m.attachments.map(attHTML).join('')}</div>` : '';
+  const seen = mine && (S.readBy[peerOf(m)] || 0) >= m.ts ? '<span class="read-receipt">Seen</span>' : '';
   const tools = `<div class="msg-tools" role="toolbar" aria-label="Message actions">${QUICK.slice(0, 3).map(e => `<button class="tool" data-act="toggle" data-emoji="${e}" title="React with :${emojiName(e)}:">${emoji(e)}</button>`).join('')}<button class="tool" data-act="react-more" title="Add reaction" aria-label="Add reaction">${ic('smilePlus')}</button><span class="tool-sep"></span><button class="tool" data-act="reply" title="Reply" aria-label="Reply">${ic('reply')}</button>${mine ? `<button class="tool" data-act="edit" title="Edit" aria-label="Edit">${ic('pencil')}</button><button class="tool danger" data-act="delete" title="Delete" aria-label="Delete">${ic('trash')}</button>` : ''}${m.text ? `<button class="tool" data-act="copy" title="Copy text" aria-label="Copy text">${ic('copy')}</button>` : ''}</div>`;
   return `<article class="msg${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}${ment ? ' mentioned' : ''}" data-id="${m.id}">
     <div class="msg-gutter">${grouped ? `<time>${timeOnly(m.ts)}</time>` : `<button class="av-btn" data-user="${u.id}" aria-label="View ${esc(u.displayName)}'s profile">${avatarHTML(u, 40, false)}</button>`}</div>
-    <div class="msg-body">${m.replyTo ? replyRefHTML(m) : ''}${grouped ? '' : `<div class="msg-head"><button class="msg-author" data-user="${u.id}">${emoEsc(u.displayName || u.username)}</button><time title="${esc(new Date(m.ts).toLocaleString())}">${timeFull(m.ts)}</time></div>`}${body}${atts}${reactsHTML(m)}</div>${tools}</article>`;
+    <div class="msg-body">${m.replyTo ? replyRefHTML(m) : ''}${grouped ? '' : `<div class="msg-head"><button class="msg-author" data-user="${u.id}">${emoEsc(u.displayName || u.username)}</button><time title="${esc(new Date(m.ts).toLocaleString())}">${timeFull(m.ts)}</time></div>`}${body}${atts}${reactsHTML(m)}${seen}</div>${tools}</article>`;
 }
 function scrollBottom() { const b = $('#messages'); b.scrollTop = b.scrollHeight; }
 function renderMessages() {
@@ -2712,6 +2735,24 @@ function showProfile(id, anchor, side) {
   Float.open(el, anchor, { side: side || 'right' });
 }
 
+function toggleMutedUser(id) {
+  S.mutedUsers = S.mutedUsers.includes(id) ? S.mutedUsers.filter(x => x !== id) : [id, ...S.mutedUsers];
+  ls.set('bc.muted.' + S.me.id, S.mutedUsers);
+  toast(S.mutedUsers.includes(id) ? 'Notifications muted for this person' : 'Notifications unmuted');
+}
+function togglePinnedUser(id) {
+  S.pinnedUsers = S.pinnedUsers.includes(id) ? S.pinnedUsers.filter(x => x !== id) : [id, ...S.pinnedUsers];
+  ls.set('bc.pinned.' + S.me.id, S.pinnedUsers); renderList();
+  toast(S.pinnedUsers.includes(id) ? 'User pinned to the top' : 'User unpinned');
+}
+async function removeFriend(id) {
+  const u = getUser(id);
+  if (!S.contacts.includes(id)) return toast('This person is not in your friends list.', true);
+  if (!(await confirmBox({ title: 'Remove ' + u.displayName + '?', body: 'This removes the connection for both of you and permanently clears the conversation history on both sides. You will need a new accepted friend request to reconnect.', ok: 'Remove' }))) return;
+  try { await S.backend.removeContact(id); S.contacts = S.contacts.filter(x => x !== id); S.msgs.delete(id); S.drafts.delete(id); S.pinnedUsers = S.pinnedUsers.filter(x => x !== id); ls.set('bc.pinned.' + S.me.id, S.pinnedUsers); if (S.active === id) { closeChatUI(); S.active = null; showEmpty(); } renderList(); toast('Removed ' + u.displayName + ' and cleared the conversation'); }
+  catch (err) { toast(err.message, true); }
+}
+
 /* ---------- desktop context menu ---------- */
 const BCContextMenu = (() => {
   let node = null;
@@ -2724,7 +2765,7 @@ const BCContextMenu = (() => {
     for (const item of items) {
       if (item.separator) { const sep = document.createElement('div'); sep.className = 'bc-context-sep'; node.append(sep); continue; }
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'bc-context-item' + (item.danger ? ' danger' : '');
+      b.type = 'button'; b.className = 'bc-context-item' + (item.danger ? ' danger' : '') + (item.pin ? ' pin-action' : '');
       b.setAttribute('role', 'menuitem'); b.textContent = item.label;
       b.addEventListener('click', () => { close(); item.run(); });
       node.append(b);
@@ -2741,11 +2782,14 @@ const BCContextMenu = (() => {
     e.preventDefault();
     if (row) {
       const id = row.dataset.open, u = getUser(id);
+      const pinned = S.pinnedUsers.includes(id);
       open(e.clientX, e.clientY, [
+        { label: pinned ? '📌 Unpin User' : '📌 Pin User', pin: true, run: () => togglePinnedUser(id) },
+        { label: S.mutedUsers.includes(id) ? 'Unmute notifications' : 'Mute notifications', run: () => toggleMutedUser(id) },
         { label: 'Open conversation', run: () => openChat(id) },
         { label: 'View profile', run: () => showProfile(id, row) },
         { separator: true },
-        { label: 'Friend options', run: () => showProfile(id, row) }
+        { label: 'Remove friend…', danger: true, run: () => removeFriend(id) }
       ]);
     } else {
       const id = msg.dataset.id, m = (S.msgs.get(S.active) || []).find(v => v.id === id);
@@ -2762,7 +2806,7 @@ const BCContextMenu = (() => {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   window.addEventListener('scroll', close, true);
   const style = document.createElement('style');
-  style.textContent = '.bc-context-menu{position:fixed;z-index:10000;min-width:190px;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:9px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
+  style.textContent = '.read-receipt{display:block;margin-top:4px;text-align:right;color:var(--muted,#9aa5b3);font-size:10px;font-weight:650}.bc-context-menu{position:fixed;z-index:2147483000;min-width:205px;max-width:min(280px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:10px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.pin-action{color:var(--accent,#E9B44C);font-weight:750;background:color-mix(in srgb,var(--accent,#E9B44C) 10%,transparent)}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
   document.head.append(style);
   return { close };
 })();
@@ -2873,7 +2917,7 @@ function openMsgSheet(id) {
 /* =========================================================
    Settings
    ========================================================= */
-const TABS = [['profile', 'My profile', 'user'], ['appearance', 'Appearance', 'palette'], ['notifications', 'Notifications', 'bell'], ['connection', 'Connection', 'plug'], ['data', 'Data and storage', 'db'], ['about', 'About', 'info']];
+const TABS = [['profile', 'My profile', 'user'], ['appearance', 'Appearance', 'palette'], ['notifications', 'Notifications', 'bell'], ['privacy', 'Privacy & security', 'shield'], ['connection', 'Connection', 'plug'], ['data', 'Data and storage', 'db'], ['about', 'About', 'info']];
 let SET = null;
 function openSettings(tab = 'profile') {
   SET = { tab, draft: { ...S.me }, dirty: false };
@@ -2892,7 +2936,7 @@ async function tryCloseSettings() {
 function renderSettings() {
   const main = $('#setMain'); if (!main) return;
   $$('.set-tab').forEach(b => { const on = b.dataset.tab === SET.tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-  ({ profile: paneProfile, appearance: paneAppearance, notifications: paneNotify, connection: paneConn, data: paneData, about: paneAbout })[SET.tab](main);
+  ({ profile: paneProfile, appearance: paneAppearance, notifications: paneNotify, privacy: panePrivacy, connection: paneConn, data: paneData, about: paneAbout })[SET.tab](main);
   main.scrollTop = 0;
 }
 function paneProfile(main) {
@@ -3135,8 +3179,11 @@ function paneNotify(main) {
     <div class="set-section">Alerts</div>
     ${toggleRow('desktop', 'Show system notifications', perm === 'denied' ? 'Notifications are blocked for this site. Allow them in your browser settings first.' : perm === 'unsupported' ? 'This browser does not support system notifications.' : 'Pop up a notification when the app is in the background.')}
     ${toggleRow('mentionsOnly', 'Only notify me for mentions', 'Stay quiet unless someone pings you with @.')}
-    <p class="hint" style="margin-top:18px">Setting your status to Do not disturb also silences everything except mentions. Sounds also follow your device's own volume.</p>`;
+    ${toggleRow('quietHours', 'Enable quiet hours', 'Silence notifications on this device during the time window below. Mentions can still get through.')}
+    <div class="row" style="margin-top:8px"><label class="field" style="flex:1">From<input class="inp" type="time" id="quietStart" value="${esc(S.settings.quietStart || '22:00')}"></label><label class="field" style="flex:1">Until<input class="inp" type="time" id="quietEnd" value="${esc(S.settings.quietEnd || '07:00')}"></label></div>
+    <p class="hint" style="margin-top:18px">Quiet hours use this device's local time. Per-person mutes are available from a conversation's right-click menu.</p>`;
   main.onchange = async e => {
+    if (e.target.id === 'quietStart' || e.target.id === 'quietEnd') { S.settings[e.target.id] = e.target.value; saveSettings(); return; }
     const k = e.target.dataset.set; if (!k) return;
     if (k === 'desktop' && e.target.checked) {
       if (!('Notification' in window)) { e.target.checked = false; return toast('This browser does not support system notifications.', true); }
@@ -3153,6 +3200,24 @@ function paneNotify(main) {
   };
   main.oninput = e => { if (e.target.id === 'volRange') { S.settings.volume = +e.target.value; $('#volVal', main).textContent = e.target.value + '%'; saveSettings(); } };
   $('#volRange', main).addEventListener('change', () => chime(false));
+}
+function panePrivacy(main) {
+  const enabled = S.backend.mode === 'server' ? S.me.readReceipts !== false : ls.get('bc.local.readReceipts', true);
+  main.innerHTML = `<h2>Privacy & security</h2><span class="hint">Control what other people can learn from your activity.</span>
+    <div class="toggle-row"><div class="t"><b>Send read receipts</b><span>When off, people won't be told when you've read their messages. This is enforced by the server for accepted connections.</span></div><label class="switch"><input type="checkbox" id="readReceipts" ${enabled ? 'checked' : ''} aria-label="Send read receipts"><span></span></label></div>
+    <div class="set-section">Connection privacy</div><p class="hint">Online status is shared only with accepted friends. Message requests do not grant access to your online status or read receipts.</p>
+    <div class="set-section">Device security</div><p class="hint">Use Connection → Sign out of all other devices if you lose a device or no longer recognize a session.</p>`;
+  main.onchange = async e => {
+    if (e.target.id !== 'readReceipts') return;
+    const value = !!e.target.checked; e.target.disabled = true;
+    try {
+      if (S.backend.mode === 'server') await S.backend.setPrefs({ readReceipts: value });
+      else ls.set('bc.local.readReceipts', value);
+      S.me.readReceipts = value; toast(value ? 'Read receipts enabled' : 'Read receipts disabled');
+    } catch (err) { e.target.checked = !value; toast(err.message, true); }
+    finally { e.target.disabled = false; }
+  };
+  main.onclick = null; main.oninput = null;
 }
 function paneConn(main) {
   const server = S.backend.mode === 'server';
