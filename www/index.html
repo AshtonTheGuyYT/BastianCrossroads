@@ -1316,7 +1316,7 @@ const S = {
   backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, pinnedUsers: [], mutedUsers: [], friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
-  settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
+  settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime', quietHours: false, quietStart: '22:00', quietEnd: '07:00' }, ls.get('bc.settings', {}))
 };
 const saveSettings = () => ls.set('bc.settings', S.settings);
 const isPhone = () => document.body.classList.contains('phone');
@@ -1476,9 +1476,18 @@ let ringTimer = null;
 /** Ringtone for incoming calls: plays the chosen style's mention sound, twice, every 2.4 s until stopped. */
 function startRing() { stopRing(); const ring = () => { chime(true); setTimeout(() => ringTimer && chime(true), 700); }; ringTimer = setInterval(ring, 2400); ring(); try { navigator.vibrate?.([300, 200, 300]); } catch {} }
 function stopRing() { if (ringTimer) { clearInterval(ringTimer); ringTimer = null; } }
+function isQuietHours() {
+  if (!S.settings.quietHours) return false;
+  const toMinutes = v => { const [h, m] = String(v || '00:00').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+  const now = new Date(), current = now.getHours() * 60 + now.getMinutes();
+  const start = toMinutes(S.settings.quietStart), end = toMinutes(S.settings.quietEnd);
+  if (start === end) return true;
+  return start < end ? current >= start && current < end : current >= start || current < end;
+}
 function notifyIncoming(m, p) {
   if (S.mutedUsers.includes(p)) return;
   const ment = mentionsMe(m.text), st = S.settings;
+  if (isQuietHours() && !ment) return;
   if (S.me.status === 'dnd' && !ment) return;
   if (st.mentionsOnly && !ment) return;
   if (st.sound) chime(ment);
@@ -3158,8 +3167,11 @@ function paneNotify(main) {
     <div class="set-section">Alerts</div>
     ${toggleRow('desktop', 'Show system notifications', perm === 'denied' ? 'Notifications are blocked for this site. Allow them in your browser settings first.' : perm === 'unsupported' ? 'This browser does not support system notifications.' : 'Pop up a notification when the app is in the background.')}
     ${toggleRow('mentionsOnly', 'Only notify me for mentions', 'Stay quiet unless someone pings you with @.')}
-    <p class="hint" style="margin-top:18px">Setting your status to Do not disturb also silences everything except mentions. Sounds also follow your device's own volume.</p>`;
+    ${toggleRow('quietHours', 'Enable quiet hours', 'Silence notifications on this device during the time window below. Mentions can still get through.')}
+    <div class="row" style="margin-top:8px"><label class="field" style="flex:1">From<input class="inp" type="time" id="quietStart" value="${esc(S.settings.quietStart || '22:00')}"></label><label class="field" style="flex:1">Until<input class="inp" type="time" id="quietEnd" value="${esc(S.settings.quietEnd || '07:00')}"></label></div>
+    <p class="hint" style="margin-top:18px">Quiet hours use this device's local time. Per-person mutes are available from a conversation's right-click menu.</p>`;
   main.onchange = async e => {
+    if (e.target.id === 'quietStart' || e.target.id === 'quietEnd') { S.settings[e.target.id] = e.target.value; saveSettings(); return; }
     const k = e.target.dataset.set; if (!k) return;
     if (k === 'desktop' && e.target.checked) {
       if (!('Notification' in window)) { e.target.checked = false; return toast('This browser does not support system notifications.', true); }
@@ -3178,7 +3190,7 @@ function paneNotify(main) {
   $('#volRange', main).addEventListener('change', () => chime(false));
 }
 function panePrivacy(main) {
-  const enabled = S.me.readReceipts !== false;
+  const enabled = S.backend.mode === 'server' ? S.me.readReceipts !== false : ls.get('bc.local.readReceipts', true);
   main.innerHTML = `<h2>Privacy & security</h2><span class="hint">Control what other people can learn from your activity.</span>
     <div class="toggle-row"><div class="t"><b>Send read receipts</b><span>When off, people won't be told when you've read their messages. This is enforced by the server for accepted connections.</span></div><label class="switch"><input type="checkbox" id="readReceipts" ${enabled ? 'checked' : ''} aria-label="Send read receipts"><span></span></label></div>
     <div class="set-section">Connection privacy</div><p class="hint">Online status is shared only with accepted friends. Message requests do not grant access to your online status or read receipts.</p>
