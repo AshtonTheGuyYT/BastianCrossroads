@@ -101,7 +101,7 @@ public class MainActivity extends Activity {
         s.setAllowContentAccess(true);                   // needed for picked attachments
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setSupportMultipleWindows(false);
-        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.3 Android");
+        s.setUserAgentString(s.getUserAgentString() + " BastionCrossroadsApp/3.1.4 Android");
         CookieManager.getInstance().setAcceptCookie(true);
 
         web.addJavascriptInterface(new Bridge(), "BastionNative");
