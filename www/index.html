@@ -2745,7 +2745,7 @@ const BCContextMenu = (() => {
         { label: 'Open conversation', run: () => openChat(id) },
         { label: 'View profile', run: () => showProfile(id, row) },
         { separator: true },
-        { label: 'Remove friend…', danger: true, run: () => showProfile(id, row) }
+        { label: 'Friend options', run: () => showProfile(id, row) }
       ]);
     } else {
       const id = msg.dataset.id, m = (S.msgs.get(S.active) || []).find(v => v.id === id);
