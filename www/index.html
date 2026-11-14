@@ -622,6 +622,7 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
 }
 @media (max-width:900px){:root{--sidebar-w:280px}.prof-grid{grid-template-columns:1fr}.prof-preview{position:static;order:-1}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+.mutuals-row{display:flex;align-items:center;gap:6px;margin:7px 0}.mutual-person{width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:var(--raised);border:1px solid var(--line);font-size:10px;font-weight:700}.mutual-person img{width:100%;height:100%;object-fit:cover}.find-results{display:grid;gap:6px;margin-top:12px;max-height:45vh;overflow:auto}.find-result{display:flex;gap:12px;align-items:center;justify-content:space-between;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);cursor:pointer}.find-result span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.find-result time{color:var(--muted);font-size:11px;white-space:nowrap}
 </style>
 </head>
 <body data-theme="bastion">
@@ -677,6 +678,7 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
         <button class="head-who" id="headWho"></button>
         <button class="icon-btn" id="callVoice" title="Voice call" aria-label="Start a voice call" hidden></button>
         <button class="icon-btn" id="callVideo" title="Video call" aria-label="Start a video call" hidden></button>
+        <button class="icon-btn" id="searchMessages" title="Search this conversation" aria-label="Search this conversation"></button>
         <button class="icon-btn" id="headProfile" title="View profile" aria-label="View profile"></button>
       </header>
       <div id="messages" role="log" aria-live="polite" tabindex="-1"></div>
@@ -1105,6 +1107,8 @@ class LocalBackend {
     return u;
   }
   async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); }
+  async respondFriendRequest(id, accept) { const c = (await DB.get('kv', 'contacts')) || []; if (accept && !c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const f = (await DB.get('kv', 'friendRequests')) || { incoming: [], outgoing: [] }; f.incoming = (f.incoming || []).filter(x => x.id !== id); await DB.put('kv', f, 'friendRequests'); return { accepted: !!accept, user: DEMO_USERS.find(x => x.id === id) }; }
+
   async accept(id) { const c = (await DB.get('kv', 'contacts')) || []; if (!c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const d = (await DB.get('kv', 'declined')) || {}; delete d[id]; await DB.put('kv', d, 'declined'); return DEMO_USERS.find(u => u.id === id); }
   async decline(id) { const d = (await DB.get('kv', 'declined')) || {}; d[id] = Date.now(); await DB.put('kv', d, 'declined'); return d; }
   async send(peer, { text, files, replyTo }, onProg) {
@@ -1184,7 +1188,7 @@ class ServerBackend {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.t === 'hello') {
         helloed = true; this.retry = 0; setConn(true);
-        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
+        const data = { me: d.me, users: d.users, contacts: d.contacts, blocked: d.blocked, declined: d.declined, friendRequests: d.friendRequests || { incoming: [], outgoing: [] }, reads: d.reads, calls: d.calls, messages: Object.values(d.convos || {}).flat() };
         if (onHello) { const f = onHello; onHello = null; onFail = null; f(data); } else emit({ t: 'resync', data });
         return;
       }
@@ -1238,7 +1242,9 @@ class ServerBackend {
   remove(peer, id) { return this.rpc('delete', { peer, id }); }
   async saveProfile(p) { const u = await this.rpc('profile', { profile: p }); return u; }
   search(q) { return this.rpc('search', { q }); }
-  addContact(username) { return this.rpc('add', { username: username.trim().toLowerCase().replace(/^@/, '') }); }
+  addContact(username) { return this.rpc('add', { username: username.trim().toLowerCase().replace(/^@/, '') }); }  respondFriendRequest(id, accept) { return this.rpc('friendRespond', { id, accept }); }
+  cancelFriendRequest(id) { return this.rpc('cancelFriendRequest', { id }); }
+
   removeContact(id) { return this.rpc('remove', { id }); }
   block(id, on) { return this.rpc(on ? 'block' : 'unblock', { id }); }
   accept(id) { return this.rpc('accept', { id }); }
@@ -1306,7 +1312,7 @@ function showWaking() {
    App state
    ========================================================= */
 const S = {
-  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {},
+  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
   settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
@@ -1345,6 +1351,7 @@ function loadSnapshot(d) {
   if (Object.keys(push).length) S.backend?.markRead?.(push);
   S.blocked = d.blocked || [];
   S.declined = d.declined || {};
+  S.friendRequests = d.friendRequests || { incoming: [], outgoing: [] };
 }
 function onEvent(e) {
   switch (e.t) {
@@ -1356,6 +1363,7 @@ function onEvent(e) {
       break;
     }
     case 'contacts': S.contacts = e.contacts; renderList(); break;
+    case 'friendRequests': S.friendRequests = e.data || { incoming: [], outgoing: [] }; renderFriendsRequests(); break;
     case 'msg': {
       const m = e.msg, p = peerOf(m);
       if (e.user) S.users.set(e.user.id, { ...(S.users.get(e.user.id) || {}), ...e.user });
@@ -1497,7 +1505,7 @@ function renderList() {
   const q = S.query.trim().toLowerCase().replace(/^@/, '');
   const lastTs = p => { const a = S.msgs.get(p); return a?.length ? a[a.length - 1].ts : 0; };
   const reqs = requestIds();
-  const rc = $('#reqCount'); if (rc) { rc.hidden = !reqs.length; rc.textContent = reqs.length; }
+  const rc = $('#reqCount'); const totalReq = reqs.length + (S.friendRequests?.incoming?.length || 0); if (rc) { rc.hidden = !totalReq; rc.textContent = totalReq; }
   $$('[data-tab-list]').forEach(b => { const on = b.dataset.tabList === (S.tab || 'messages'); b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   if (S.tab === 'requests' && !q) return renderRequests(box, reqs.sort((a, b) => lastTs(b) - lastTs(a)));
   let ids = [...new Set(S.contacts)].filter(id => S.users.has(id));
@@ -1513,7 +1521,7 @@ function renderList() {
         ${avatarHTML(u, 44)}
         <span class="convo-main">
           <span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
-          <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || '@' + u.username))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
+          <span class="convo-bottom"><span class="convo-prev${typing ? ' typing' : ''}">${typing ? 'typing…' : emoEsc(previewOf(last) || (u.customStatus || 'Start a conversation'))}</span>${ping ? '<span class="badge ping" title="You were mentioned">@</span>' : ''}${un.length ? `<span class="badge" aria-label="${un.length} unread">${un.length > 99 ? '99+' : un.length}</span>` : ''}</span>
         </span></button>`;
     }
   }
@@ -1521,7 +1529,7 @@ function renderList() {
     const others = S.dirResults.filter(u => u.id !== S.me.id && !S.contacts.includes(u.id));
     if (others.length) {
       h += `<div class="list-label"><span>Other people</span></div>`;
-      for (const u of others) h += `<div class="person-row">${avatarHTML(u, 40)}<div class="who"><b>${esc(u.displayName)}</b><span>@${esc(u.username)}</span></div><button class="btn sm" data-add="${esc(u.username)}">${ic('userPlus')}Add</button></div>`;
+      for (const u of others) h += `<div class="person-row">${avatarHTML(u, 40)}<div class="who"><b>${esc(u.displayName)}</b><span></span></div><button class="btn sm" data-add="${esc(u.username)}">${ic('userPlus')}Add</button></div>`;
     }
     if (!ids.length && !others.length) h += `<div class="list-empty">No one matches “${esc(S.query)}”.<br><button class="btn ghost sm" data-addprompt="${esc(q)}">Add @${esc(q)}</button></div>`;
   } else if (!ids.length) {
@@ -1530,14 +1538,20 @@ function renderList() {
   box.innerHTML = h;
 }
 function renderRequests(box, ids) {
-  if (!ids.length) { box.innerHTML = `<div class="list-empty">No message requests.<br>When someone you haven't added messages you, it shows up here first so you can decide.</div>`; return; }
-  box.innerHTML = `<div class="list-label"><span>Waiting for you</span><span>${ids.length}</span></div>` + ids.map(id => {
-    const u = S.users.get(id), arr = (S.msgs.get(id) || []).filter(m => m.from === id), last = arr[arr.length - 1], un = unreadOf(id);
-    return `<button class="convo${S.active === id ? ' active' : ''}${un.length ? ' unread' : ''}" data-open="${id}">${avatarHTML({ ...u, status: 'offline' }, 44, false)}
-      <span class="convo-main"><span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
-      <span class="convo-bottom"><span class="convo-prev">${emoEsc(previewOf(last) || '')}</span><span class="req-tag">Request</span></span></span></button>`;
-  }).join('');
+  const friends = S.friendRequests?.incoming || [];
+  let out = '';
+  if (friends.length) {
+    out += '<div class="list-label"><span>Friend requests</span><span>' + friends.length + '</span></div>';
+    for (const u of friends) out += '<div class="person-row">' + avatarHTML(u,40,false) + '<div class="who"><b>' + esc(u.displayName) + '</b><span>Wants to connect</span></div><button class="btn sm" data-friend-accept="' + u.id + '">Accept</button><button class="btn sm ghost" data-friend-reject="' + u.id + '">Decline</button></div>';
+  }
+  if (ids.length) {
+    out += '<div class="list-label"><span>Message requests</span><span>' + ids.length + '</span></div>';
+    out += ids.map(id => { const u = S.users.get(id), arr = (S.msgs.get(id) || []).filter(m => m.from === id), last = arr[arr.length - 1], un = unreadOf(id); return '<button class="convo' + (S.active === id ? ' active' : '') + (un.length ? ' unread' : '') + '" data-open="' + id + '">' + avatarHTML({ ...u, status: 'offline' },44,false) + '<span class="convo-main"><span class="convo-top"><span class="convo-name">' + emoEsc(u.displayName || u.username) + '</span>' + (last ? '<span class="convo-time">' + timeShort(last.ts) + '</span>' : '') + '</span><span class="convo-bottom"><span class="convo-prev">' + emoEsc(previewOf(last) || '') + '</span><span class="req-tag">Request</span></span></span></button>'; }).join('');
+  }
+  if (!out) out = '<div class="list-empty">No requests right now.<br>Friend requests and messages from people you have not added will appear here.</div>';
+  box.innerHTML = out;
 }
+function renderFriendsRequests() { renderList(); }
 function renderRequestBar() {
   const bar = $('#requestBar'), comp = $('#composer'); if (!bar) return;
   const req = S.active && isRequest(S.active);
@@ -1836,7 +1850,7 @@ function renderMessages() {
   const box = $('#messages'), p = S.active; if (!p) return;
   const keepTop = box.scrollTop;
   const u = getUser(p), arr = S.msgs.get(p) || [];
-  let h = `<div class="intro">${avatarHTML(u, 84, false)}<h2>${esc(u.displayName || u.username)}</h2><p>This is the start of your conversation with <b>@${esc(u.username)}</b>. Everything you share here stays between the two of you.</p></div>`;
+  let h = `<div class="intro">${avatarHTML(u, 84, false)}<h2>${esc(u.displayName || u.username)}</h2><p>This is the start of your conversation with <b>${esc(u.displayName || 'this person')}</b>. Everything you share here stays between the two of you.</p></div>`;
   let prev = null;
   for (const m of arr) {
     if (!prev || dayKey(prev.ts) !== dayKey(m.ts)) { h += `<div class="day" role="separator">${dayLabel(m.ts)}</div>`; prev = null; }
@@ -2019,7 +2033,7 @@ const Picker = {
     this.open = true; this.items = []; this.sel.clear(); this.done = false; this.loading = false; this.busy = false; this.expanded = false;
     const el = this.el();
     el.innerHTML = `<div class="pk-grab" id="pkGrab" aria-hidden="true"><i></i></div>
-      <div class="pk-head" id="pkHead"><b>Recent</b><button class="btn ghost sm" data-pk="files">${ic('folder')}Browse files</button><button class="icon-btn" data-pk="close" aria-label="Close">${ic('x')}</button></div>
+      <div class="pk-head" id="pkHead"><b>Recent</b>${NATIVE ? `<button class="btn ghost sm" data-pk="camera">${ic('camera')}Camera</button>` : ''}<button class="btn ghost sm" data-pk="files">${ic('folder')}Browse files</button><button class="icon-btn" data-pk="close" aria-label="Close">${ic('x')}</button></div>
       <div class="pk-body" id="pkBody"></div>
       <div class="pk-foot" id="pkFoot" hidden><span id="pkCount"></span><button class="btn sm" data-pk="add">Add</button></div>`;
     this.setH(this.sizes().peek);
@@ -2105,6 +2119,16 @@ const Picker = {
     const files = await chooseFiles({ multiple: true });
     if (files.length) addFiles(files);
   },
+  async capture() {
+    this.close();
+    if (!NATIVE || !window.BastionNative.capturePhoto) return toast("Camera capture is available in the Android app.");
+    const files = await new Promise(resolve => {
+      if (Native.pending) Native.pending([]);
+      Native.pending = resolve;
+      try { BastionNative.capturePhoto(); } catch { Native.pending = null; resolve([]); }
+    });
+    if (files.length) await addFiles(files);
+  },
   wire(el) {
     el.addEventListener('click', e => {
       const b = e.target.closest('[data-pk]');
@@ -2112,6 +2136,7 @@ const Picker = {
         const a = b.dataset.pk;
         if (a === 'close') this.close();
         else if (a === 'files') this.browse();
+        else if (a === 'camera') this.capture();
         else if (a === 'add') this.commit();
         else if (a === 'allow') { if (this.state === 'denied') { if (this.asked) this.askedTwice = true; this.asked = true; } this.waiting = this.state === 'denied'; this.render(); BastionNative.request(); }
         else if (a === 'settings') BastionNative.settings();
@@ -2634,6 +2659,7 @@ function openEmoji(anchor, onPick, title = 'Emoji') {
    Profile card (the user popup)
    ========================================================= */
 function bannerStyle(u) { return u.banner ? `--b:url('${u.banner}')` : `--b:linear-gradient(135deg,${u.bannerColor || u.accent || '#3A4658'},color-mix(in srgb,${u.bannerColor || u.accent || '#3A4658'} 55%,#000))`; }
+function mutualsHTML(u) { const list = Array.isArray(u.mutuals) ? u.mutuals : []; if (!list.length) return ''; return '<div class="pcard-sec"><h4>' + list.length + ' mutual ' + (list.length === 1 ? 'friend' : 'friends') + '</h4><div class="mutuals-row">' + list.map(m => '<span class="mutual-person" title="' + esc(m.displayName) + '">' + (m.avatar ? '<img src="' + esc(m.avatar) + '" alt="">' : '<span>' + esc(initials(m.displayName)) + '</span>') + '</span>').join('') + '</div><p class="hint">' + list.map(m => esc(m.displayName)).join(', ') + '</p></div>'; }
 function profileCardHTML(u, { preview = false } = {}) {
   const isMe = u.id === S.me.id, st = statusOf(u);
   const since = u.createdAt ? new Date(u.createdAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }) : null;
@@ -2641,13 +2667,14 @@ function profileCardHTML(u, { preview = false } = {}) {
   let actions = '';
   if (!preview) {
     if (isMe) actions = `<div class="pcard-sec"><h4>Status</h4><div class="status-menu">${['online', 'idle', 'dnd', 'invisible'].map(s => `<button class="status-opt${u.status === s ? ' sel' : ''}" data-status="${s}"><i class="dot st-${s}"></i>${STATUS_LABEL[s]}${u.status === s ? ic('check', 'chk') : ''}</button>`).join('')}</div></div><div class="pcard-actions"><button class="btn" data-pact="edit">${ic('pencil')}Edit profile</button><button class="btn ghost" data-pact="settings">${ic('gear')}Settings</button></div>`;
-    else actions = `<div class="pcard-actions">${isContact ? `<button class="btn" data-pact="message" data-id="${u.id}">${ic('msg')}Message</button><button class="btn ghost" data-pact="remove" data-id="${u.id}" title="Remove from your list">${ic('userX')}Remove</button>` : `<button class="btn" data-pact="add" data-name="${esc(u.username)}">${ic('userPlus')}Add person</button>`}</div>${S.backend.block ? `<div class="pcard-actions" style="margin-top:8px"><button class="btn ghost sm" style="flex:1;color:var(--danger)" data-pact="block" data-id="${u.id}">${(S.blocked || []).includes(u.id) ? 'Unblock' : 'Block'} @${esc(u.username)}</button></div>` : ''}`;
+    else actions = `<div class="pcard-actions">${isContact ? `<button class="btn" data-pact="message" data-id="${u.id}">${ic('msg')}Message</button><button class="btn ghost" data-pact="remove" data-id="${u.id}" title="Remove from your list">${ic('userX')}Remove</button>` : `<button class="btn" data-pact="add" data-name="${esc(u.username)}">${ic('userPlus')}Add person</button>`}</div>${S.backend.block ? `<div class="pcard-actions" style="margin-top:8px"><button class="btn ghost sm" style="flex:1;color:var(--danger)" data-pact="block" data-id="${u.id}">${(S.blocked || []).includes(u.id) ? 'Unblock' : 'Block'}</button></div>` : ''}`;
   }
   return `<div class="pcard-banner" style="${bannerStyle(u)}"></div>
     <div class="pcard-top">${avatarHTML(u, 88)}</div>
     <div class="pcard-body" style="--accent-local:${esc(u.accent || '')}">
       <div class="pcard-name">${emoEsc(u.displayName || u.username)}</div>
-      <div class="pcard-handle"><span>@${esc(u.username)}</span>${u.pronouns ? `<span class="pill">${esc(u.pronouns)}</span>` : ''}</div>
+      <div class="pcard-handle"><span>${isMe ? "@" + esc(u.username) : ""}</span>${u.pronouns ? `<span class="pill">${esc(u.pronouns)}</span>` : ''}</div>
+      ${mutualsHTML(u)}
       ${u.customStatus ? `<div class="pcard-status">${emoEsc(u.customStatus)}</div>` : ''}
       ${u.bio ? `<div class="pcard-sec"><h4>About</h4><p>${fmt(u.bio)}</p></div>` : (isMe && !preview ? `<div class="pcard-sec"><h4>About</h4><p style="color:var(--muted)">Add a bio so people know who they are talking to.</p></div>` : '')}
       ${since ? `<div class="pcard-sec"><h4>Member since</h4><p>${since}</p></div>` : ''}
@@ -2691,10 +2718,11 @@ async function addPerson(username, open) {
   try {
     const u = await S.backend.addContact(username);
     S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u });
-    if (!S.contacts.includes(u.id)) S.contacts.unshift(u.id);
+    if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id);
+    else if (u.requestState === 'sent' && !S.friendRequests.outgoing.includes(u.id)) S.friendRequests.outgoing.push(u.id);
     S.query = ''; $('#search').value = ''; S.dirResults = [];
-    renderList(); toast(`Added ${u.displayName}`);
-    if (open) openChat(u.id);
+    renderList(); renderFriendsRequests(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`);
+    if (open && u.requestState === 'friends') openChat(u.id);
     return u;
   } catch (e) { toast(e.message, true); throw e; }
 }
@@ -2709,16 +2737,26 @@ async function openAddModal(prefill = '') {
   $('#addForm', m).onsubmit = async e => {
     e.preventDefault(); const v = inp.value.trim(); if (!v) { $('#addErr', m).textContent = 'Enter a username.'; return; }
     $('#addGo', m).disabled = true;
-    try { const u = await S.backend.addContact(v); S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u }); if (!S.contacts.includes(u.id)) S.contacts.unshift(u.id); renderList(); Modal.close(); toast(`Added ${u.displayName}`); openChat(u.id); }
+    try { const u = await S.backend.addContact(v); S.users.set(u.id, { ...(S.users.get(u.id) || {}), ...u }); if (u.requestState === 'friends' && !S.contacts.includes(u.id)) S.contacts.unshift(u.id); else if (u.requestState === 'sent' && !S.friendRequests.outgoing.includes(u.id)) S.friendRequests.outgoing.push(u.id); renderList(); renderFriendsRequests(); Modal.close(); toast(u.requestState === 'friends' ? `Connected with ${u.displayName}` : `Friend request sent to ${u.displayName}`); if (u.requestState === 'friends') openChat(u.id); }
     catch (err) { $('#addErr', m).textContent = err.message; $('#addGo', m).disabled = false; }
   };
   try {
     const list = (await S.backend.search('')).filter(u => u.id !== S.me.id && !S.contacts.includes(u.id)).slice(0, 6);
-    $('#sugg', m).innerHTML = list.length ? list.map(u => `<div class="person-row">${avatarHTML(u, 38)}<div class="who"><b>${esc(u.displayName)}</b><span>@${esc(u.username)}</span></div><button class="btn sm ghost" data-name="${esc(u.username)}">Add</button></div>`).join('') : '<div class="hint">Everyone you might know is already on your list.</div>';
+    $('#sugg', m).innerHTML = list.length ? list.map(u => `<div class="person-row">${avatarHTML(u, 38)}<div class="who"><b>${esc(u.displayName)}</b><span></span></div><button class="btn sm ghost" data-name="${esc(u.username)}">Add</button></div>`).join('') : '<div class="hint">Everyone you might know is already on your list.</div>';
     $('#sugg', m).onclick = async e => { const b = e.target.closest('[data-name]'); if (!b) return; b.disabled = true; try { await addPerson(b.dataset.name, false); b.closest('.person-row').remove(); } catch { b.disabled = false; } };
   } catch { $('#sugg', m).innerHTML = ''; }
 }
 
+function openMessageSearch() {
+  if (!S.active) return;
+  const peer = S.active, messages = S.msgs.get(peer) || [];
+  const m = Modal.open('<div class="modal-head"><h3>Search conversation</h3><button class="icon-btn" data-x aria-label="Close">' + ic('x') + '</button></div><div class="modal-body"><input class="inp" id="msgFindInput" placeholder="Search messages or file names" autocomplete="off"><div id="msgFindResults" class="find-results"><p class="hint">Type a word or file name to search this conversation.</p></div></div>', { label: 'Search conversation' });
+  $('[data-x]', m).onclick = () => Modal.close();
+  const input = $('#msgFindInput', m), results = $('#msgFindResults', m);
+  input.oninput = () => { const q = input.value.trim().toLowerCase(); if (!q) { results.innerHTML = '<p class="hint">Type a word or file name to search this conversation.</p>'; return; } const found = messages.filter(x => (x.text || '').toLowerCase().includes(q) || (x.attachments || []).some(a => (a.name || '').toLowerCase().includes(q))).slice(-40).reverse(); results.innerHTML = found.length ? found.map(x => '<button class="find-result" data-find-msg="' + esc(x.id) + '"><span>' + esc((x.text || (x.attachments || []).map(a => a.name).join(', ') || 'Attachment').slice(0, 150)) + '</span><time>' + esc(timeFull(x.ts)) + '</time></button>').join('') : '<p class="hint">No matching messages.</p>'; };
+  results.onclick = e => { const b = e.target.closest('[data-find-msg]'); if (!b) return; const id = b.dataset.findMsg; Modal.close(); const el = $$('#messages [data-id]').find(x => x.dataset.id === id); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('mentioned'); setTimeout(() => el.classList.remove('mentioned'), 1600); } };
+  input.focus();
+}
 /* =========================================================
    Message actions
    ========================================================= */
@@ -3259,7 +3297,8 @@ function wire() {
   $('#icSearch').outerHTML = ic('search');
   $('#addBtn').innerHTML = ic('userPlus'); $('#gearBtn').innerHTML = ic('gear');
   $('#emptyAdd').innerHTML = ic('userPlus') + 'Add a person';
-  $('#backBtn').innerHTML = ic('back'); $('#headProfile').innerHTML = ic('user'); $('#callVoice').innerHTML = ic('phone'); $('#callVideo').innerHTML = ic('video');
+  $('#backBtn').innerHTML = ic('back'); $('#headProfile').innerHTML = ic('user'); $('#searchMessages').innerHTML = ic('search');
+  $('#searchMessages').onclick = () => openMessageSearch(); $('#callVoice').innerHTML = ic('phone'); $('#callVideo').innerHTML = ic('video');
   $('#callVoice').onclick = () => Calls.start(S.active, 'audio'); $('#callVideo').onclick = () => Calls.start(S.active, 'video');
   $('#callUI').addEventListener('click', e => { const b = e.target.closest('[data-call]'); if (!b) return; ({ accept: () => Calls.accept(false), acceptVideo: () => Calls.accept(true), decline: () => Calls.decline(), hangup: () => Calls.hangup(), mic: () => Calls.toggleMic(), cam: () => Calls.toggleCam(), flip: () => Calls.flip() })[b.dataset.call]?.(); });
   $('#attachBtn').innerHTML = ic('clip'); $('#emojiBtn').innerHTML = ic('smile'); $('#sendBtn').innerHTML = ic('send');
@@ -3284,6 +3323,12 @@ function wire() {
   $$('[data-tab-list]').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tabList; renderList(); }));
   $('#requestBar').addEventListener('click', e => { const b = e.target.closest('[data-req]'); if (b) answerRequest(b.dataset.req); });
   $('#convoList').addEventListener('click', async e => {
+    const fa = e.target.closest('[data-friend-accept]'), fr = e.target.closest('[data-friend-reject]');
+    if (fa || fr) {
+      const id = (fa || fr).dataset.friendAccept || (fa || fr).dataset.friendReject;
+      try { const result = await S.backend.respondFriendRequest(id, !!fa); S.friendRequests.incoming = (S.friendRequests.incoming || []).filter(x => x.id !== id); if (result.accepted) { if (!S.contacts.includes(id)) S.contacts.unshift(id); if (result.user) S.users.set(id, { ...(S.users.get(id) || {}), ...result.user }); toast('Friend request accepted'); } else toast('Friend request declined'); renderAll(); } catch (err) { toast(err.message, true); }
+      return;
+    }
     const o = e.target.closest('[data-open]'); if (o) { openChat(o.dataset.open); return; }
     const a = e.target.closest('[data-add]'); if (a) { a.disabled = true; try { await addPerson(a.dataset.add, true); } catch { a.disabled = false; } return; }
     const p = e.target.closest('[data-addprompt]'); if (p) openAddModal(p.dataset.addprompt);

@@ -10,7 +10,7 @@ const path = require('path');
 
 const MSG_KEEP_PER_CONVO = 5000; // older messages stay in the database; the in-memory window holds the newest
 
-function emptyDb() { return { users: {}, sessions: {}, contacts: {}, blocks: {}, declined: {}, reads: {}, convos: {}, files: {} }; }
+function emptyDb() { return { users: {}, sessions: {}, contacts: {}, friendRequests: {}, blocks: {}, declined: {}, reads: {}, convos: {}, files: {} }; }
 const convoKey = (a, b) => [a, b].sort().join(':');
 
 class JsonStore {
@@ -28,7 +28,7 @@ class JsonStore {
     }, 250);
   }
   saveUser() { this._save(); } saveSession() { this._save(); } deleteSession() { this._save(); } deleteSessions() { this._save(); }
-  setContacts() { this._save(); } setBlocks() { this._save(); } setDeclined() { this._save(); } setReads() { this._save(); } saveMessage() { this._save(); } deleteMessage() { this._save(); }
+  setContacts() { this._save(); } setFriendRequests() { this._save(); } setBlocks() { this._save(); } setDeclined() { this._save(); } setReads() { this._save(); } saveMessage() { this._save(); } deleteMessage() { this._save(); }
   saveFile() { this._save(); } deleteFile() { this._save(); }
   async flush() { clearTimeout(this.t); fs.writeFileSync(this.file, JSON.stringify(this.db), { mode: 0o600 }); }
 }
@@ -48,6 +48,7 @@ class PgStore {
       CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at BIGINT NOT NULL, expires_at BIGINT NOT NULL, last_seen BIGINT NOT NULL, ip TEXT);
       CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
       CREATE TABLE IF NOT EXISTS contacts (owner TEXT NOT NULL, list JSONB NOT NULL, PRIMARY KEY (owner));
+      CREATE TABLE IF NOT EXISTS friend_requests (owner TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (owner));
       CREATE TABLE IF NOT EXISTS blocks (owner TEXT NOT NULL, list JSONB NOT NULL, PRIMARY KEY (owner));
       CREATE TABLE IF NOT EXISTS declined (owner TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (owner));
       CREATE TABLE IF NOT EXISTS reads (owner TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (owner));
@@ -64,6 +65,7 @@ class PgStore {
     await this.pool.query('DELETE FROM sessions WHERE expires_at < $1', [Date.now()]);
     for (const r of (await this.pool.query('SELECT * FROM sessions')).rows) db.sessions[r.token_hash] = { userId: r.user_id, createdAt: +r.created_at, expiresAt: +r.expires_at, lastSeen: +r.last_seen };
     for (const r of (await this.pool.query('SELECT owner, list FROM contacts')).rows) db.contacts[r.owner] = r.list;
+    for (const r of (await this.pool.query('SELECT owner, data FROM friend_requests')).rows) db.friendRequests[r.owner] = r.data;
     for (const r of (await this.pool.query('SELECT owner, list FROM blocks')).rows) db.blocks[r.owner] = r.list;
     for (const r of (await this.pool.query('SELECT owner, data FROM declined')).rows) db.declined[r.owner] = r.data;
     for (const r of (await this.pool.query('SELECT owner, data FROM reads')).rows) db.reads[r.owner] = r.data;
@@ -82,6 +84,7 @@ class PgStore {
   deleteSession(h) { return this._run('DELETE FROM sessions WHERE token_hash=$1', [h]); }
   deleteSessions(userId, exceptHash) { return this._run('DELETE FROM sessions WHERE user_id=$1 AND token_hash <> $2', [userId, exceptHash || '']); }
   setContacts(owner, list) { return this._run('INSERT INTO contacts (owner, list) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET list=$2', [owner, JSON.stringify(list)]); }
+  setFriendRequests(owner, data) { return this._run('INSERT INTO friend_requests (owner, data) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET data=$2', [owner, JSON.stringify(data || {})]); }
   setDeclined(owner, data) { return this._run('INSERT INTO declined (owner, data) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET data=$2', [owner, JSON.stringify(data || {})]); }
   setReads(owner, data) { return this._run('INSERT INTO reads (owner, data) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET data=$2', [owner, JSON.stringify(data || {})]); }
   setBlocks(owner, list) { return this._run('INSERT INTO blocks (owner, list) VALUES ($1,$2) ON CONFLICT (owner) DO UPDATE SET list=$2', [owner, JSON.stringify(list)]); }
