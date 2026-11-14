@@ -110,7 +110,7 @@ const accepted = (owner, other) => (db.contacts[owner] || []).includes(other);
 function mutualUsers(owner, viewer) {
   if (!viewer || owner === viewer) return [];
   const mine = new Set(db.contacts[viewer] || []);
-  return (db.contacts[owner] || []).filter(id => mine.has(id) && id !== owner && id !== viewer && db.users[id] && !blocked(owner, id) && !blocked(viewer, id)).slice(0, 20).map(id => ({ id, displayName: db.users[id].displayName, avatar: db.users[id].avatar || null, accent: db.users[id].accent || '#E9B44C' }));
+  return (db.contacts[owner] || []).filter(id => mine.has(id) && id !== owner && id !== viewer && db.users[id] && (db.contacts[id] || []).includes(owner) && (db.contacts[id] || []).includes(viewer) && !blocked(owner, id) && !blocked(viewer, id) && !blocked(id, owner) && !blocked(id, viewer)).slice(0, 20).map(id => ({ id, displayName: db.users[id].displayName, avatar: db.users[id].avatar || null, accent: db.users[id].accent || '#E9B44C' }));
 }
 function pub(u, viewer) {
   const shareStatus = !viewer || accepted(u.id, viewer);
