@@ -107,10 +107,15 @@ const fileRefs = new Map();  // fileId -> Set<convoKey>
 const online = uid => (sockets.get(uid)?.size || 0) > 0;
 /** What `viewer` may see of user `u`. Online status is only shared with people `u` has accepted. */
 const accepted = (owner, other) => (db.contacts[owner] || []).includes(other);
+function mutualUsers(owner, viewer) {
+  if (!viewer || owner === viewer) return [];
+  const mine = new Set(db.contacts[viewer] || []);
+  return (db.contacts[owner] || []).filter(id => mine.has(id) && id !== owner && id !== viewer && db.users[id] && !blocked(owner, id) && !blocked(viewer, id)).slice(0, 20).map(id => ({ id, displayName: db.users[id].displayName, avatar: db.users[id].avatar || null, accent: db.users[id].accent || '#E9B44C' }));
+}
 function pub(u, viewer) {
   const shareStatus = !viewer || accepted(u.id, viewer);
   const status = !shareStatus || !online(u.id) || u.status === 'invisible' ? 'offline' : (u.status || 'online');
-  return { acceptedYou: viewer ? accepted(u.id, viewer) : undefined, id: u.id, username: u.username, displayName: u.displayName, bio: u.bio || '', pronouns: u.pronouns || '', avatar: u.avatar || null, banner: u.banner || null, bannerColor: u.bannerColor || '#3A4658', accent: u.accent || '#E9B44C', status, customStatus: u.customStatus || '', createdAt: u.createdAt };
+  return { acceptedYou: viewer ? accepted(u.id, viewer) : undefined, id: u.id, username: u.username, displayName: u.displayName, bio: u.bio || '', pronouns: u.pronouns || '', avatar: u.avatar || null, banner: u.banner || null, bannerColor: u.bannerColor || '#3A4658', accent: u.accent || '#E9B44C', status, customStatus: u.customStatus || '', createdAt: u.createdAt, mutuals: mutualUsers(u.id, viewer) };
 }
 const self = u => ({ ...pub(u), status: u.status || 'online' });
 function sendTo(uid, obj) { const s = sockets.get(uid); if (!s) return; const d = JSON.stringify(obj); for (const ws of s) if (ws.readyState === 1 && ws.authed) ws.send(d); }
@@ -429,7 +434,7 @@ function onAuthed(ws, s) {
     const peer = a === me.id ? b : a; people.add(peer);
     convos[peer] = list.slice(-HISTORY_SENT).map(withFiles);
   }
-  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, reads: db.reads[me.id] || {}, limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
+  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, friendRequests: { incoming: Object.entries(db.friendRequests[me.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], me.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[me.id]).map(([owner]) => owner) }, reads: db.reads[me.id] || {}, limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
   if (!wasOnline) broadcastUser(me);
 }
 const reply = (ws, rid, ok, data) => ws.readyState === 1 && rid && ws.send(JSON.stringify({ t: 'res', rid, ok, ...(ok ? { data } : { error: data }) }));
@@ -467,11 +472,41 @@ async function handle(ws, me, d) {
     case 'add': {
       const name = sec.str(d.username, 30).toLowerCase().replace(/^@/, '').trim();
       const u = byName(name);
-      if (!u || blocked(u.id, me.id)) return no(`No one with the username @${name} was found. Check the spelling and try again.`);
-      if (u.id === me.id) return no('That is you. Add someone else by their username.');
-      addContact(me.id, u.id); return ok(pub(u, me.id));
+      if (!u || blocked(u.id, me.id)) return no('No matching person was found. Check the spelling and try again.');
+      if (u.id === me.id) return no('That is you. Add someone else.');
+      if (accepted(me.id, u.id) && accepted(u.id, me.id)) return ok({ ...pub(u, me.id), requestState: 'friends' });
+      if (accepted(me.id, u.id)) return ok({ ...pub(u, me.id), requestState: 'friends' });
+      const incoming = db.friendRequests[me.id] || {};
+      if (incoming[u.id]) {
+        addContact(me.id, u.id); addContact(u.id, me.id);
+        delete incoming[u.id]; store.setFriendRequests(me.id, incoming);
+        sendTo(u.id, { t: 'friendRequests', data: { incoming: Object.entries(db.friendRequests[u.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], u.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[u.id]).map(([owner]) => owner) } });
+        return ok({ ...pub(u, me.id), requestState: 'friends' });
+      }
+      const sent = (db.friendRequests[u.id] ||= {});
+      if (!sent[me.id]) { sent[me.id] = Date.now(); store.setFriendRequests(u.id, sent); }
+      sendTo(u.id, { t: 'friendRequests', data: { incoming: Object.entries(sent).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], u.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[u.id]).map(([owner]) => owner) } });
+      return ok({ ...pub(u, me.id), requestState: 'sent' });
     }
-    case 'remove': { db.contacts[me.id] = (db.contacts[me.id] || []).filter(x => x !== d.id); store.setContacts(me.id, db.contacts[me.id]); return ok(true); }
+    case 'friendRespond': {
+      const id = typeof d.id === 'string' ? d.id : '';
+      const u = db.users[id];
+      if (!u || u.id === me.id || blocked(me.id, id) || blocked(id, me.id)) return no('That request is no longer available.');
+      const incoming = db.friendRequests[me.id] || {};
+      if (!incoming[id]) return no('That friend request is no longer pending.');
+      delete incoming[id]; store.setFriendRequests(me.id, incoming);
+      if (d.accept === true) { addContact(me.id, id); addContact(id, me.id); }
+      const outgoing = db.friendRequests[id] || {};
+      sendTo(id, { t: 'friendRequests', data: { incoming: Object.entries(outgoing).filter(([x]) => db.users[x]).map(([x, ts]) => ({ ...pub(db.users[x], id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[id]).map(([owner]) => owner) } });
+      return ok({ accepted: d.accept === true, user: pub(u, me.id) });
+    }
+    case 'cancelFriendRequest': {
+      const id = typeof d.id === 'string' ? d.id : '';
+      const outgoing = db.friendRequests[id] || {};
+      if (outgoing[me.id]) { delete outgoing[me.id]; store.setFriendRequests(id, outgoing); sendTo(id, { t: 'friendRequests', data: { incoming: Object.entries(outgoing).filter(([x]) => db.users[x]).map(([x, ts]) => ({ ...pub(db.users[x], id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[id]).map(([owner]) => owner) } }); }
+      return ok(true);
+    }
+    case 'remove': { db.contacts[me.id] = (db.contacts[me.id] || []).filter(x => x !== d.id); db.contacts[d.id] = (db.contacts[d.id] || []).filter(x => x !== me.id); store.setContacts(me.id, db.contacts[me.id]); store.setContacts(d.id, db.contacts[d.id]); return ok(true); }
     case 'block': case 'unblock': {
       if (typeof d.id !== 'string' || !db.users[d.id] || d.id === me.id) return no('That person could not be found.');
       const l = (db.blocks[me.id] ||= []);
