@@ -114,7 +114,7 @@ function mutualUsers(owner, viewer) {
 }
 function pub(u, viewer) {
   const shareStatus = !viewer || accepted(u.id, viewer);
-  const status = !shareStatus || !online(u.id) || u.status === 'invisible' ? 'offline' : (u.status || 'online');
+  const status = !(shareStatus && accepted(viewer, u.id)) || !online(u.id) || u.status === 'invisible' ? 'offline' : (u.status || 'online');
   return { acceptedYou: viewer ? accepted(u.id, viewer) : undefined, id: u.id, username: u.username, displayName: u.displayName, bio: u.bio || '', pronouns: u.pronouns || '', avatar: u.avatar || null, banner: u.banner || null, bannerColor: u.bannerColor || '#3A4658', accent: u.accent || '#E9B44C', status, customStatus: u.customStatus || '', createdAt: u.createdAt, mutuals: mutualUsers(u.id, viewer) };
 }
 const self = u => ({ ...pub(u), status: u.status || 'online' });
@@ -510,7 +510,30 @@ async function handle(ws, me, d) {
       if (outgoing[me.id]) { delete outgoing[me.id]; store.setFriendRequests(id, outgoing); sendTo(id, { t: 'friendRequests', data: { incoming: Object.entries(outgoing).filter(([x]) => db.users[x]).map(([x, ts]) => ({ ...pub(db.users[x], id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[id]).map(([owner]) => owner) } }); }
       return ok(true);
     }
-    case 'remove': { db.contacts[me.id] = (db.contacts[me.id] || []).filter(x => x !== d.id); db.contacts[d.id] = (db.contacts[d.id] || []).filter(x => x !== me.id); store.setContacts(me.id, db.contacts[me.id]); store.setContacts(d.id, db.contacts[d.id]); return ok(true); }
+    case 'remove': {
+      const peer = typeof d.id === 'string' ? d.id : '';
+      if (!db.users[peer] || peer === me.id) return no('That person could not be found.');
+      db.contacts[me.id] = (db.contacts[me.id] || []).filter(x => x !== peer);
+      db.contacts[peer] = (db.contacts[peer] || []).filter(x => x !== me.id);
+      store.setContacts(me.id, db.contacts[me.id]); store.setContacts(peer, db.contacts[peer]);
+      const key = convoKey(me.id, peer), old = db.convos[key] || [];
+      delete db.convos[key];
+      for (const m of old) {
+        store.deleteMessage(m.id);
+        for (const a of m.attachments || []) {
+          const refs = fileRefs.get(a.id); if (refs) { refs.delete(key); if (!refs.size) fileRefs.delete(a.id); }
+        }
+      }
+      delete (db.reads[me.id] ||= {})[peer]; delete (db.reads[peer] ||= {})[me.id];
+      store.setReads(me.id, db.reads[me.id]); store.setReads(peer, db.reads[peer]);
+      sendTo(me.id, { t: 'contacts', contacts: db.contacts[me.id] });
+      sendTo(peer, { t: 'contacts', contacts: db.contacts[peer] });
+      sendTo(me.id, { t: 'convoRemoved', peer });
+      sendTo(peer, { t: 'convoRemoved', peer: me.id });
+      if (db.users[peer]) sendTo(peer, { t: 'user', user: pub(me, peer) });
+      sendTo(me.id, { t: 'user', user: pub(db.users[peer], me.id) });
+      return ok(true);
+    }
     case 'block': case 'unblock': {
       if (typeof d.id !== 'string' || !db.users[d.id] || d.id === me.id) return no('That person could not be found.');
       const l = (db.blocks[me.id] ||= []);
