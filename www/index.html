@@ -1095,9 +1095,6 @@ class LocalBackend {
     q = q.trim().toLowerCase().replace(/^@/, '');
     return DEMO_USERS.filter(u => !q || u.username.includes(q) || u.displayName.toLowerCase().includes(q));
   }
-  async addContact(username) { return this.rpc('add', { username }); }
-  async respondFriendRequest(id, accept) { return this.rpc('friendRespond', { id, accept }); }
-  async cancelFriendRequest(id) { return this.rpc('cancelFriendRequest', { id }); }
   async addContact(username) {
     username = username.trim().toLowerCase().replace(/^@/, '');
     if (username === S.me.username) throw new Error('That is you. Add someone else by their username.');
@@ -1108,6 +1105,8 @@ class LocalBackend {
     return u;
   }
   async removeContact(id) { const c = ((await DB.get('kv', 'contacts')) || []).filter(x => x !== id); await DB.put('kv', c, 'contacts'); }
+  async respondFriendRequest(id, accept) { const c = (await DB.get('kv', 'contacts')) || []; if (accept && !c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const f = (await DB.get('kv', 'friendRequests')) || { incoming: [], outgoing: [] }; f.incoming = (f.incoming || []).filter(x => x.id !== id); await DB.put('kv', f, 'friendRequests'); return { accepted: !!accept, user: DEMO_USERS.find(x => x.id === id) }; }
+
   async accept(id) { const c = (await DB.get('kv', 'contacts')) || []; if (!c.includes(id)) { c.unshift(id); await DB.put('kv', c, 'contacts'); } const d = (await DB.get('kv', 'declined')) || {}; delete d[id]; await DB.put('kv', d, 'declined'); return DEMO_USERS.find(u => u.id === id); }
   async decline(id) { const d = (await DB.get('kv', 'declined')) || {}; d[id] = Date.now(); await DB.put('kv', d, 'declined'); return d; }
   async send(peer, { text, files, replyTo }, onProg) {
