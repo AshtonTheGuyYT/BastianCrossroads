@@ -567,7 +567,7 @@ async function handle(ws, me, d) {
     case 'typing': { if (typeof d.to === 'string' && db.users[d.to] && d.to !== me.id && accepted(d.to, me.id) && !blocked(d.to, me.id) && ws.misc.take()) sendTo(d.to, { t: 'typing', from: me.id }); return; }
     case 'accept': {
       const u = typeof d.id === 'string' && db.users[d.id]; if (!u || u.id === me.id) return no('That person could not be found.');
-      addContact(me.id, u.id);
+      addContact(me.id, u.id); addContact(u.id, me.id);
       if (db.declined[me.id]?.[u.id]) { delete db.declined[me.id][u.id]; store.setDeclined(me.id, db.declined[me.id]); }
       sendTo(u.id, { t: 'user', user: pub(me, u.id) }); // they can now see you online
       return ok(pub(u, me.id));
