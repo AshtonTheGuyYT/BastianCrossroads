@@ -2665,13 +2665,13 @@ function profileCardHTML(u, { preview = false } = {}) {
   let actions = '';
   if (!preview) {
     if (isMe) actions = `<div class="pcard-sec"><h4>Status</h4><div class="status-menu">${['online', 'idle', 'dnd', 'invisible'].map(s => `<button class="status-opt${u.status === s ? ' sel' : ''}" data-status="${s}"><i class="dot st-${s}"></i>${STATUS_LABEL[s]}${u.status === s ? ic('check', 'chk') : ''}</button>`).join('')}</div></div><div class="pcard-actions"><button class="btn" data-pact="edit">${ic('pencil')}Edit profile</button><button class="btn ghost" data-pact="settings">${ic('gear')}Settings</button></div>`;
-    else actions = `<div class="pcard-actions">${isContact ? `<button class="btn" data-pact="message" data-id="${u.id}">${ic('msg')}Message</button><button class="btn ghost" data-pact="remove" data-id="${u.id}" title="Remove from your list">${ic('userX')}Remove</button>` : `<button class="btn" data-pact="add" data-name="${esc(u.username)}">${ic('userPlus')}Add person</button>`}</div>${S.backend.block ? `<div class="pcard-actions" style="margin-top:8px"><button class="btn ghost sm" style="flex:1;color:var(--danger)" data-pact="block" data-id="${u.id}">${(S.blocked || []).includes(u.id) ? 'Unblock' : 'Block'} @${esc(u.username)}</button></div>` : ''}`;
+    else actions = `<div class="pcard-actions">${isContact ? `<button class="btn" data-pact="message" data-id="${u.id}">${ic('msg')}Message</button><button class="btn ghost" data-pact="remove" data-id="${u.id}" title="Remove from your list">${ic('userX')}Remove</button>` : `<button class="btn" data-pact="add" data-name="${esc(u.username)}">${ic('userPlus')}Add person</button>`}</div>${S.backend.block ? `<div class="pcard-actions" style="margin-top:8px"><button class="btn ghost sm" style="flex:1;color:var(--danger)" data-pact="block" data-id="${u.id}">${(S.blocked || []).includes(u.id) ? 'Unblock' : 'Block'}</button></div>` : ''}`;
   }
   return `<div class="pcard-banner" style="${bannerStyle(u)}"></div>
     <div class="pcard-top">${avatarHTML(u, 88)}</div>
     <div class="pcard-body" style="--accent-local:${esc(u.accent || '')}">
       <div class="pcard-name">${emoEsc(u.displayName || u.username)}</div>
-      <div class="pcard-handle"><span>@${esc(u.username)}</span>${u.pronouns ? `<span class="pill">${esc(u.pronouns)}</span>` : ''}</div>
+      <div class="pcard-handle"><span>${isMe ? "@" + esc(u.username) : ""}</span>${u.pronouns ? `<span class="pill">${esc(u.pronouns)}</span>` : ''}</div>
       ${mutualsHTML(u)}
       ${u.customStatus ? `<div class="pcard-status">${emoEsc(u.customStatus)}</div>` : ''}
       ${u.bio ? `<div class="pcard-sec"><h4>About</h4><p>${fmt(u.bio)}</p></div>` : (isMe && !preview ? `<div class="pcard-sec"><h4>About</h4><p style="color:var(--muted)">Add a bio so people know who they are talking to.</p></div>` : '')}
