@@ -470,6 +470,7 @@ async function handle(ws, me, d) {
       return ok(list.slice(0, 20).map(u => pub(u, me.id)));
     }
     case 'add': {
+      if (!ws.misc.take()) return no('You are sending friend requests too quickly. Wait a moment.');
       const name = sec.str(d.username, 30).toLowerCase().replace(/^@/, '').trim();
       const u = byName(name);
       if (!u || blocked(u.id, me.id)) return no('No matching person was found. Check the spelling and try again.');
@@ -480,6 +481,7 @@ async function handle(ws, me, d) {
       if (incoming[u.id]) {
         addContact(me.id, u.id); addContact(u.id, me.id);
         delete incoming[u.id]; store.setFriendRequests(me.id, incoming);
+        const reverse = db.friendRequests[u.id] || {}; delete reverse[me.id]; store.setFriendRequests(u.id, reverse);
         sendTo(u.id, { t: 'friendRequests', data: { incoming: Object.entries(db.friendRequests[u.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], u.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[u.id]).map(([owner]) => owner) } });
         return ok({ ...pub(u, me.id), requestState: 'friends' });
       }
@@ -495,7 +497,7 @@ async function handle(ws, me, d) {
       const incoming = db.friendRequests[me.id] || {};
       if (!incoming[id]) return no('That friend request is no longer pending.');
       delete incoming[id]; store.setFriendRequests(me.id, incoming);
-      if (d.accept === true) { addContact(me.id, id); addContact(id, me.id); }
+      if (d.accept === true) { addContact(me.id, id); addContact(id, me.id); const reverse = db.friendRequests[id] || {}; delete reverse[me.id]; store.setFriendRequests(id, reverse); }
       const outgoing = db.friendRequests[id] || {};
       sendTo(id, { t: 'friendRequests', data: { incoming: Object.entries(outgoing).filter(([x]) => db.users[x]).map(([x, ts]) => ({ ...pub(db.users[x], id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[id]).map(([owner]) => owner) } });
       return ok({ accepted: d.accept === true, user: pub(u, me.id) });
