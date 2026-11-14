@@ -117,7 +117,7 @@ function pub(u, viewer) {
   const status = !(shareStatus && accepted(viewer, u.id)) || !online(u.id) || u.status === 'invisible' ? 'offline' : (u.status || 'online');
   return { acceptedYou: viewer ? accepted(u.id, viewer) : undefined, id: u.id, username: u.username, displayName: u.displayName, bio: u.bio || '', pronouns: u.pronouns || '', avatar: u.avatar || null, banner: u.banner || null, bannerColor: u.bannerColor || '#3A4658', accent: u.accent || '#E9B44C', status, customStatus: u.customStatus || '', createdAt: u.createdAt, mutuals: mutualUsers(u.id, viewer) };
 }
-const self = u => ({ ...pub(u), status: u.status || 'online' });
+const self = u => ({ ...pub(u), status: u.status || 'online', readReceipts: u.readReceipts !== false });
 function sendTo(uid, obj) { const s = sockets.get(uid); if (!s) return; const d = JSON.stringify(obj); for (const ws of s) if (ws.readyState === 1 && ws.authed) ws.send(d); }
 function watchers(uid) {
   const out = new Set();
@@ -462,6 +462,12 @@ async function handle(ws, me, d) {
       });
       store.saveUser(me); broadcastUser(me); return ok(self(me));
     }
+    case 'prefs': {
+      const p = d.prefs && typeof d.prefs === 'object' ? d.prefs : {};
+      if (typeof p.readReceipts === 'boolean') me.readReceipts = p.readReceipts;
+      store.saveUser(me);
+      return ok(self(me));
+    }
     case 'search': {
       if (!ws.misc.take()) return ok([]);
       const q = sec.str(d.q, 40).toLowerCase().replace(/^@/, '').trim();
@@ -609,7 +615,7 @@ async function handle(ws, me, d) {
       const mine = (db.reads[me.id] ||= {}), changed = {};
       for (const [peer, raw] of Object.entries(marks).slice(0, 200)) {
         const ts = Math.min(Math.floor(Number(raw)), Date.now());
-        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)]) continue;
+        if (!Number.isFinite(ts) || ts <= 0 || !db.users[peer] || peer === me.id || !db.convos[convoKey(me.id, peer)] || !accepted(me.id, peer) || !accepted(peer, me.id) || db.users[peer].readReceipts === false) continue;
         if (ts > (mine[peer] || 0)) { mine[peer] = ts; changed[peer] = ts; }
       }
       if (Object.keys(changed).length) {
