@@ -483,6 +483,7 @@ async function handle(ws, me, d) {
         delete incoming[u.id]; store.setFriendRequests(me.id, incoming);
         const reverse = db.friendRequests[u.id] || {}; delete reverse[me.id]; store.setFriendRequests(u.id, reverse);
         broadcastUser(me); broadcastUser(u);
+        sendTo(me.id, { t: 'contacts', contacts: db.contacts[me.id] || [] }); sendTo(u.id, { t: 'contacts', contacts: db.contacts[u.id] || [] });
         sendTo(u.id, { t: 'friendRequests', data: { incoming: Object.entries(db.friendRequests[u.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], u.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[u.id]).map(([owner]) => owner) } });
         return ok({ ...pub(u, me.id), requestState: 'friends' });
       }
@@ -498,7 +499,7 @@ async function handle(ws, me, d) {
       const incoming = db.friendRequests[me.id] || {};
       if (!incoming[id]) return no('That friend request is no longer pending.');
       delete incoming[id]; store.setFriendRequests(me.id, incoming);
-      if (d.accept === true) { addContact(me.id, id); addContact(id, me.id); const reverse = db.friendRequests[id] || {}; delete reverse[me.id]; store.setFriendRequests(id, reverse); broadcastUser(me); broadcastUser(u); }
+      if (d.accept === true) { addContact(me.id, id); addContact(id, me.id); const reverse = db.friendRequests[id] || {}; delete reverse[me.id]; store.setFriendRequests(id, reverse); broadcastUser(me); broadcastUser(u); sendTo(me.id, { t: 'contacts', contacts: db.contacts[me.id] || [] }); sendTo(id, { t: 'contacts', contacts: db.contacts[id] || [] }); }
       const outgoing = db.friendRequests[id] || {};
       sendTo(id, { t: 'friendRequests', data: { incoming: Object.entries(outgoing).filter(([x]) => db.users[x]).map(([x, ts]) => ({ ...pub(db.users[x], id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[id]).map(([owner]) => owner) } });
       return ok({ accepted: d.accept === true, user: pub(u, me.id) });
