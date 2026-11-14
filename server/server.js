@@ -434,7 +434,7 @@ function onAuthed(ws, s) {
     const peer = a === me.id ? b : a; people.add(peer);
     convos[peer] = list.slice(-HISTORY_SENT).map(withFiles);
   }
-  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, friendRequests: { incoming: Object.entries(db.friendRequests[me.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], me.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[me.id]).map(([owner]) => owner) }, reads: db.reads[me.id] || {}, readBy: Object.fromEntries(contacts.filter(peer => accepted(me.id, peer) && accepted(peer, me.id)).map(peer => [peer, db.reads[peer]?.[me.id] || 0])), limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
+  ws.send(JSON.stringify({ t: 'hello', me: self(me), contacts, blocked: db.blocks[me.id] || [], users: [...people].filter(i => db.users[i]).map(i => pub(db.users[i], me.id)), convos, declined: db.declined[me.id] || {}, friendRequests: { incoming: Object.entries(db.friendRequests[me.id] || {}).filter(([id]) => db.users[id]).map(([id, ts]) => ({ ...pub(db.users[id], me.id), requestedAt: ts })), outgoing: Object.entries(db.friendRequests).filter(([owner, data]) => data && data[me.id]).map(([owner]) => owner) }, reads: db.reads[me.id] || {}, readBy: Object.fromEntries(contacts.filter(peer => accepted(me.id, peer) && accepted(peer, me.id) && db.users[peer]?.readReceipts !== false).map(peer => [peer, db.reads[peer]?.[me.id] || 0])), limits: { maxFile: MAX_FILE }, calls: callsConfigured() }));
   if (!wasOnline) broadcastUser(me);
 }
 const reply = (ws, rid, ok, data) => ws.readyState === 1 && rid && ws.send(JSON.stringify({ t: 'res', rid, ok, ...(ok ? { data } : { error: data }) }));
@@ -465,7 +465,12 @@ async function handle(ws, me, d) {
     case 'prefs': {
       if (!ws.misc.take()) return no('You are changing privacy settings too quickly. Wait a moment.');
       const p = d.prefs && typeof d.prefs === 'object' ? d.prefs : {};
-      if (typeof p.readReceipts === 'boolean') me.readReceipts = p.readReceipts;
+      if (typeof p.readReceipts === 'boolean' && p.readReceipts !== (me.readReceipts !== false)) {
+        // When re-enabling, discard reads made while receipts were disabled so they cannot be revealed retroactively.
+        if (p.readReceipts) { db.reads[me.id] = {}; store.setReads(me.id, db.reads[me.id]); }
+        me.readReceipts = p.readReceipts;
+        if (!p.readReceipts) for (const peer of db.contacts[me.id] || []) sendTo(peer, { t: 'readReceiptClear', from: me.id });
+      }
       store.saveUser(me);
       return ok(self(me));
     }
