@@ -2737,7 +2737,7 @@ const BCContextMenu = (() => {
     for (const item of items) {
       if (item.separator) { const sep = document.createElement('div'); sep.className = 'bc-context-sep'; node.append(sep); continue; }
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'bc-context-item' + (item.danger ? ' danger' : '');
+      b.type = 'button'; b.className = 'bc-context-item' + (item.danger ? ' danger' : '') + (item.pin ? ' pin-action' : '');
       b.setAttribute('role', 'menuitem'); b.textContent = item.label;
       b.addEventListener('click', () => { close(); item.run(); });
       node.append(b);
@@ -2756,9 +2756,9 @@ const BCContextMenu = (() => {
       const id = row.dataset.open, u = getUser(id);
       const pinned = S.pinnedUsers.includes(id);
       open(e.clientX, e.clientY, [
+        { label: pinned ? '📌 Unpin User' : '📌 Pin User', pin: true, run: () => togglePinnedUser(id) },
         { label: 'Open conversation', run: () => openChat(id) },
         { label: 'View profile', run: () => showProfile(id, row) },
-        { label: pinned ? 'Unpin user' : '📌 Pin user', run: () => togglePinnedUser(id) },
         { separator: true },
         { label: 'Remove friend…', danger: true, run: () => removeFriend(id) }
       ]);
@@ -2777,7 +2777,7 @@ const BCContextMenu = (() => {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   window.addEventListener('scroll', close, true);
   const style = document.createElement('style');
-  style.textContent = '.bc-context-menu{position:fixed;z-index:10000;min-width:190px;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:9px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
+  style.textContent = '.bc-context-menu{position:fixed;z-index:2147483000;min-width:205px;max-width:min(280px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow-y:auto;overscroll-behavior:contain;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:10px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.pin-action{color:var(--accent,#E9B44C);font-weight:750;background:color-mix(in srgb,var(--accent,#E9B44C) 10%,transparent)}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
   document.head.append(style);
   return { close };
 })();
