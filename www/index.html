@@ -2712,6 +2712,61 @@ function showProfile(id, anchor, side) {
   Float.open(el, anchor, { side: side || 'right' });
 }
 
+/* ---------- desktop context menu ---------- */
+const BCContextMenu = (() => {
+  let node = null;
+  const close = () => { node?.remove(); node = null; };
+  function open(x, y, items) {
+    close();
+    node = document.createElement('div');
+    node.className = 'bc-context-menu';
+    node.setAttribute('role', 'menu');
+    for (const item of items) {
+      if (item.separator) { const sep = document.createElement('div'); sep.className = 'bc-context-sep'; node.append(sep); continue; }
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'bc-context-item' + (item.danger ? ' danger' : '');
+      b.setAttribute('role', 'menuitem'); b.textContent = item.label;
+      b.addEventListener('click', () => { close(); item.run(); });
+      node.append(b);
+    }
+    document.body.append(node);
+    const w = node.offsetWidth, h = node.offsetHeight;
+    node.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
+    node.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + 'px';
+  }
+  document.addEventListener('contextmenu', e => {
+    const row = e.target.closest('.convo[data-open]');
+    const msg = e.target.closest('.msg[data-id]');
+    if (!row && !msg) return;
+    e.preventDefault();
+    if (row) {
+      const id = row.dataset.open, u = getUser(id);
+      open(e.clientX, e.clientY, [
+        { label: 'Open conversation', run: () => openChat(id) },
+        { label: 'View profile', run: () => showProfile(id, row) },
+        { separator: true },
+        { label: 'Remove friend…', danger: true, run: () => showProfile(id, row) }
+      ]);
+    } else {
+      const id = msg.dataset.id, m = (S.msgs.get(S.active) || []).find(v => v.id === id);
+      if (!m) return;
+      const items = [
+        { label: 'Reply', run: () => setReply(id) },
+        ...(m.text ? [{ label: 'Copy message', run: () => copyMsg(id) }] : [])
+      ];
+      if (m.from === S.me.id) items.push({ separator: true }, { label: 'Delete message…', danger: true, run: () => deleteMsg(id) });
+      open(e.clientX, e.clientY, items);
+    }
+  });
+  document.addEventListener('pointerdown', e => { if (node && !node.contains(e.target)) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  window.addEventListener('scroll', close, true);
+  const style = document.createElement('style');
+  style.textContent = '.bc-context-menu{position:fixed;z-index:10000;min-width:190px;padding:6px;background:var(--panel,#202630);border:1px solid var(--line,#394352);border-radius:12px;box-shadow:0 12px 36px #0008;display:flex;flex-direction:column;gap:3px}.bc-context-item{width:100%;border:0;border-radius:7px;background:transparent;color:var(--text,#eee);padding:9px 12px;text-align:left;font:inherit;font-size:13px;cursor:pointer}.bc-context-item:hover,.bc-context-item:focus-visible{background:var(--hover,#303946);outline:none}.bc-context-item.danger{color:var(--danger,#ef6258)}.bc-context-sep{height:1px;background:var(--line,#394352);margin:3px 4px}';
+  document.head.append(style);
+  return { close };
+})();
+
 /* =========================================================
    Add person
    ========================================================= */
