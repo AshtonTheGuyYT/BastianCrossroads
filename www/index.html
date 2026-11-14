@@ -1502,7 +1502,7 @@ function renderList() {
   const q = S.query.trim().toLowerCase().replace(/^@/, '');
   const lastTs = p => { const a = S.msgs.get(p); return a?.length ? a[a.length - 1].ts : 0; };
   const reqs = requestIds();
-  const rc = $('#reqCount'); if (rc) { rc.hidden = !reqs.length; rc.textContent = reqs.length; }
+  const rc = $('#reqCount'); const totalReq = reqs.length + (S.friendRequests?.incoming?.length || 0); if (rc) { rc.hidden = !totalReq; rc.textContent = totalReq; }
   $$('[data-tab-list]').forEach(b => { const on = b.dataset.tabList === (S.tab || 'messages'); b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   if (S.tab === 'requests' && !q) return renderRequests(box, reqs.sort((a, b) => lastTs(b) - lastTs(a)));
   let ids = [...new Set(S.contacts)].filter(id => S.users.has(id));
@@ -1535,14 +1535,20 @@ function renderList() {
   box.innerHTML = h;
 }
 function renderRequests(box, ids) {
-  if (!ids.length) { box.innerHTML = `<div class="list-empty">No message requests.<br>When someone you haven't added messages you, it shows up here first so you can decide.</div>`; return; }
-  box.innerHTML = `<div class="list-label"><span>Waiting for you</span><span>${ids.length}</span></div>` + ids.map(id => {
-    const u = S.users.get(id), arr = (S.msgs.get(id) || []).filter(m => m.from === id), last = arr[arr.length - 1], un = unreadOf(id);
-    return `<button class="convo${S.active === id ? ' active' : ''}${un.length ? ' unread' : ''}" data-open="${id}">${avatarHTML({ ...u, status: 'offline' }, 44, false)}
-      <span class="convo-main"><span class="convo-top"><span class="convo-name">${emoEsc(u.displayName || u.username)}</span>${last ? `<span class="convo-time">${timeShort(last.ts)}</span>` : ''}</span>
-      <span class="convo-bottom"><span class="convo-prev">${emoEsc(previewOf(last) || '')}</span><span class="req-tag">Request</span></span></span></button>`;
-  }).join('');
+  const friends = S.friendRequests?.incoming || [];
+  let out = '';
+  if (friends.length) {
+    out += '<div class="list-label"><span>Friend requests</span><span>' + friends.length + '</span></div>';
+    for (const u of friends) out += '<div class="person-row">' + avatarHTML(u,40,false) + '<div class="who"><b>' + esc(u.displayName) + '</b><span>Wants to connect</span></div><button class="btn sm" data-friend-accept="' + u.id + '">Accept</button><button class="btn sm ghost" data-friend-reject="' + u.id + '">Decline</button></div>';
+  }
+  if (ids.length) {
+    out += '<div class="list-label"><span>Message requests</span><span>' + ids.length + '</span></div>';
+    out += ids.map(id => { const u = S.users.get(id), arr = (S.msgs.get(id) || []).filter(m => m.from === id), last = arr[arr.length - 1], un = unreadOf(id); return '<button class="convo' + (S.active === id ? ' active' : '') + (un.length ? ' unread' : '') + '" data-open="' + id + '">' + avatarHTML({ ...u, status: 'offline' },44,false) + '<span class="convo-main"><span class="convo-top"><span class="convo-name">' + emoEsc(u.displayName || u.username) + '</span>' + (last ? '<span class="convo-time">' + timeShort(last.ts) + '</span>' : '') + '</span><span class="convo-bottom"><span class="convo-prev">' + emoEsc(previewOf(last) || '') + '</span><span class="req-tag">Request</span></span></span></button>'; }).join('');
+  }
+  if (!out) out = '<div class="list-empty">No requests right now.<br>Friend requests and messages from people you have not added will appear here.</div>';
+  box.innerHTML = out;
 }
+function renderFriendsRequests() { renderList(); }
 function renderRequestBar() {
   const bar = $('#requestBar'), comp = $('#composer'); if (!bar) return;
   const req = S.active && isRequest(S.active);
@@ -3300,6 +3306,12 @@ function wire() {
   $$('[data-tab-list]').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tabList; renderList(); }));
   $('#requestBar').addEventListener('click', e => { const b = e.target.closest('[data-req]'); if (b) answerRequest(b.dataset.req); });
   $('#convoList').addEventListener('click', async e => {
+    const fa = e.target.closest('[data-friend-accept]'), fr = e.target.closest('[data-friend-reject]');
+    if (fa || fr) {
+      const id = (fa || fr).dataset.friendAccept || (fa || fr).dataset.friendReject;
+      try { const result = await S.backend.respondFriendRequest(id, !!fa); S.friendRequests.incoming = (S.friendRequests.incoming || []).filter(x => x.id !== id); if (result.accepted) { if (!S.contacts.includes(id)) S.contacts.unshift(id); if (result.user) S.users.set(id, { ...(S.users.get(id) || {}), ...result.user }); toast('Friend request accepted'); } else toast('Friend request declined'); renderAll(); } catch (err) { toast(err.message, true); }
+      return;
+    }
     const o = e.target.closest('[data-open]'); if (o) { openChat(o.dataset.open); return; }
     const a = e.target.closest('[data-add]'); if (a) { a.disabled = true; try { await addPerson(a.dataset.add, true); } catch { a.disabled = false; } return; }
     const p = e.target.closest('[data-addprompt]'); if (p) openAddModal(p.dataset.addprompt);
