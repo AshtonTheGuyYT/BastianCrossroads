@@ -1279,6 +1279,7 @@ class ServerBackend {
     }, 30);
     return p;
   }
+  setPrefs(prefs) { return this.rpc('prefs', { prefs }); }
   async signOut() { try { await fetch(this.base + '/api/logout', { method: 'POST', headers: { authorization: 'Bearer ' + this.token } }); } catch {} this.close(); }
   close() { this.closed = true; try { this.ws?.close(); } catch {} }
 }
@@ -1312,7 +1313,7 @@ function showWaking() {
    App state
    ========================================================= */
 const S = {
-  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, pinnedUsers: [], friendRequests: { incoming: [], outgoing: [] },
+  backend: null, me: null, users: new Map(), contacts: [], msgs: new Map(), lastRead: {}, pinnedUsers: [], mutedUsers: [], friendRequests: { incoming: [], outgoing: [] },
   active: null, query: '', typing: new Map(), replyTo: null, pending: [], sending: false,
   editing: null, editDraft: null, drafts: new Map(), stick: true, dirResults: [],
   settings: Object.assign({ theme: 'bastion', sound: true, desktop: false, mentionsOnly: false, fontSize: 15, compact: false, volume: 85, soundStyle: 'chime' }, ls.get('bc.settings', {}))
@@ -1336,7 +1337,7 @@ function avatarHTML(u, s = 40, dot = true) {
 /* ---------- events from backends ---------- */
 function emit(e) { try { onEvent(e); } catch (err) { console.error(err); } }
 function loadSnapshot(d) {
-  S.me = d.me; S.pinnedUsers = ls.get('bc.pinned.' + S.me.id, []); S.users = new Map();
+  S.me = d.me; S.pinnedUsers = ls.get('bc.pinned.' + S.me.id, []); S.mutedUsers = ls.get('bc.muted.' + S.me.id, []); S.users = new Map();
   for (const u of d.users || []) if (u.id !== d.me.id) S.users.set(u.id, u);
   S.contacts = [...(d.contacts || [])];
   S.msgs = new Map();
@@ -1476,6 +1477,7 @@ let ringTimer = null;
 function startRing() { stopRing(); const ring = () => { chime(true); setTimeout(() => ringTimer && chime(true), 700); }; ringTimer = setInterval(ring, 2400); ring(); try { navigator.vibrate?.([300, 200, 300]); } catch {} }
 function stopRing() { if (ringTimer) { clearInterval(ringTimer); ringTimer = null; } }
 function notifyIncoming(m, p) {
+  if (S.mutedUsers.includes(p)) return;
   const ment = mentionsMe(m.text), st = S.settings;
   if (S.me.status === 'dnd' && !ment) return;
   if (st.mentionsOnly && !ment) return;
@@ -2712,6 +2714,11 @@ function showProfile(id, anchor, side) {
   Float.open(el, anchor, { side: side || 'right' });
 }
 
+function toggleMutedUser(id) {
+  S.mutedUsers = S.mutedUsers.includes(id) ? S.mutedUsers.filter(x => x !== id) : [id, ...S.mutedUsers];
+  ls.set('bc.muted.' + S.me.id, S.mutedUsers);
+  toast(S.mutedUsers.includes(id) ? 'Notifications muted for this person' : 'Notifications unmuted');
+}
 function togglePinnedUser(id) {
   S.pinnedUsers = S.pinnedUsers.includes(id) ? S.pinnedUsers.filter(x => x !== id) : [id, ...S.pinnedUsers];
   ls.set('bc.pinned.' + S.me.id, S.pinnedUsers); renderList();
@@ -2757,6 +2764,7 @@ const BCContextMenu = (() => {
       const pinned = S.pinnedUsers.includes(id);
       open(e.clientX, e.clientY, [
         { label: pinned ? '📌 Unpin User' : '📌 Pin User', pin: true, run: () => togglePinnedUser(id) },
+        { label: S.mutedUsers.includes(id) ? 'Unmute notifications' : 'Mute notifications', run: () => toggleMutedUser(id) },
         { label: 'Open conversation', run: () => openChat(id) },
         { label: 'View profile', run: () => showProfile(id, row) },
         { separator: true },
@@ -2888,7 +2896,7 @@ function openMsgSheet(id) {
 /* =========================================================
    Settings
    ========================================================= */
-const TABS = [['profile', 'My profile', 'user'], ['appearance', 'Appearance', 'palette'], ['notifications', 'Notifications', 'bell'], ['connection', 'Connection', 'plug'], ['data', 'Data and storage', 'db'], ['about', 'About', 'info']];
+const TABS = [['profile', 'My profile', 'user'], ['appearance', 'Appearance', 'palette'], ['notifications', 'Notifications', 'bell'], ['privacy', 'Privacy & security', 'shield'], ['connection', 'Connection', 'plug'], ['data', 'Data and storage', 'db'], ['about', 'About', 'info']];
 let SET = null;
 function openSettings(tab = 'profile') {
   SET = { tab, draft: { ...S.me }, dirty: false };
@@ -2907,7 +2915,7 @@ async function tryCloseSettings() {
 function renderSettings() {
   const main = $('#setMain'); if (!main) return;
   $$('.set-tab').forEach(b => { const on = b.dataset.tab === SET.tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-  ({ profile: paneProfile, appearance: paneAppearance, notifications: paneNotify, connection: paneConn, data: paneData, about: paneAbout })[SET.tab](main);
+  ({ profile: paneProfile, appearance: paneAppearance, notifications: paneNotify, privacy: panePrivacy, connection: paneConn, data: paneData, about: paneAbout })[SET.tab](main);
   main.scrollTop = 0;
 }
 function paneProfile(main) {
@@ -3168,6 +3176,24 @@ function paneNotify(main) {
   };
   main.oninput = e => { if (e.target.id === 'volRange') { S.settings.volume = +e.target.value; $('#volVal', main).textContent = e.target.value + '%'; saveSettings(); } };
   $('#volRange', main).addEventListener('change', () => chime(false));
+}
+function panePrivacy(main) {
+  const enabled = S.me.readReceipts !== false;
+  main.innerHTML = `<h2>Privacy & security</h2><span class="hint">Control what other people can learn from your activity.</span>
+    <div class="toggle-row"><div class="t"><b>Send read receipts</b><span>When off, people won't be told when you've read their messages. This is enforced by the server for accepted connections.</span></div><label class="switch"><input type="checkbox" id="readReceipts" ${enabled ? 'checked' : ''} aria-label="Send read receipts"><span></span></label></div>
+    <div class="set-section">Connection privacy</div><p class="hint">Online status is shared only with accepted friends. Message requests do not grant access to your online status or read receipts.</p>
+    <div class="set-section">Device security</div><p class="hint">Use Connection → Sign out of all other devices if you lose a device or no longer recognize a session.</p>`;
+  main.onchange = async e => {
+    if (e.target.id !== 'readReceipts') return;
+    const value = !!e.target.checked; e.target.disabled = true;
+    try {
+      if (S.backend.mode === 'server') await S.backend.setPrefs({ readReceipts: value });
+      else ls.set('bc.local.readReceipts', value);
+      S.me.readReceipts = value; toast(value ? 'Read receipts enabled' : 'Read receipts disabled');
+    } catch (err) { e.target.checked = !value; toast(err.message, true); }
+    finally { e.target.disabled = false; }
+  };
+  main.onclick = null; main.oninput = null;
 }
 function paneConn(main) {
   const server = S.backend.mode === 'server';
