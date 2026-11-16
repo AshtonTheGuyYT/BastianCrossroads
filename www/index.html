@@ -3583,7 +3583,12 @@ function showWhatsNewForExistingUser() {
       <div class="whatsnew-item"><div class="whatsnew-icon">📌</div><div><b>Pin your important people</b><p>Pin and unpin friends from the conversation menu to keep them easy to find.</p></div></div>
       <div class="whatsnew-item"><div class="whatsnew-icon">✨</div><div><b>A smoother interface</b><p>The right-click menu is easier to use, including on smaller screens.</p></div></div>
     </div><div class="whatsnew-actions"><button type="button" id="whatsNewClose">Sounds good</button></div></section>`;
+  let closed = false;
+  const onKey = e => { if (e.key === 'Escape' && overlay.isConnected) close(); };
   const close = async () => {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('keydown', onKey);
     overlay.remove(); style.remove(); ls.set(key, true);
     if (S.backend.mode === 'server') {
       try { await S.backend.markWhatsNewSeen(); S.me.whatsNewSeenAt = Date.now(); }
@@ -3592,7 +3597,7 @@ function showWhatsNewForExistingUser() {
   };
   overlay.querySelector('#whatsNewClose').addEventListener('click', close);
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', function onKey(e) { if (e.key === 'Escape' && overlay.isConnected) { document.removeEventListener('keydown', onKey); close(); } });
+  document.addEventListener('keydown', onKey);
   document.body.append(overlay);
   overlay.querySelector('#whatsNewClose').focus();
 }
