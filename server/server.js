@@ -117,7 +117,7 @@ function pub(u, viewer) {
   const status = !(shareStatus && accepted(viewer, u.id)) || !online(u.id) || u.status === 'invisible' ? 'offline' : (u.status || 'online');
   return { acceptedYou: viewer ? accepted(u.id, viewer) : undefined, id: u.id, username: u.username, displayName: u.displayName, bio: u.bio || '', pronouns: u.pronouns || '', avatar: u.avatar || null, banner: u.banner || null, bannerColor: u.bannerColor || '#3A4658', accent: u.accent || '#E9B44C', status, customStatus: u.customStatus || '', createdAt: u.createdAt, mutuals: mutualUsers(u.id, viewer) };
 }
-const self = u => ({ ...pub(u), status: u.status || 'online', readReceipts: u.readReceipts !== false });
+const self = u => ({ ...pub(u), status: u.status || 'online', readReceipts: u.readReceipts !== false, whatsNewSeenAt: u.whatsNewSeenAt || null });
 function sendTo(uid, obj) { const s = sockets.get(uid); if (!s) return; const d = JSON.stringify(obj); for (const ws of s) if (ws.readyState === 1 && ws.authed) ws.send(d); }
 function watchers(uid) {
   const out = new Set();
@@ -461,6 +461,12 @@ async function handle(ws, me, d) {
         status: ['online', 'idle', 'dnd', 'invisible'].includes(p.status) ? p.status : me.status
       });
       store.saveUser(me); broadcastUser(me); return ok(self(me));
+    }
+    case 'whatsNewSeen': {
+      if (!ws.misc.take()) return no('Please wait a moment before updating this setting again.');
+      if (!me.whatsNewSeenAt) me.whatsNewSeenAt = Date.now();
+      store.saveUser(me);
+      return ok({ seenAt: me.whatsNewSeenAt });
     }
     case 'prefs': {
       if (!ws.misc.take()) return no('You are changing privacy settings too quickly. Wait a moment.');
