@@ -716,6 +716,7 @@ body.phone #toasts{bottom:calc(84px + var(--safe-b))}
    Bastion Crossroads — client
    ========================================================= */
 const APP_VERSION = '3.4.1';
+const WHATS_NEW_ROLLOUT_AT = Date.parse('2026-11-16T00:00:00Z');
 /* ---------------------------------------------------------
    YOUR SERVER: put your hosted server address here, e.g.
    const DEFAULT_SERVER = 'https://bastion-crossroads.onrender.com';
@@ -1280,6 +1281,7 @@ class ServerBackend {
     return p;
   }
   setPrefs(prefs) { return this.rpc('prefs', { prefs }); }
+  markWhatsNewSeen() { return this.rpc('whatsNewSeen'); }
   async signOut() { try { await fetch(this.base + '/api/logout', { method: 'POST', headers: { authorization: 'Bearer ' + this.token } }); } catch {} this.close(); }
   close() { this.closed = true; try { this.ws?.close(); } catch {} }
 }
@@ -3558,7 +3560,41 @@ function start(d) {
   loadSnapshot(d);
   $('#onboard').hidden = true; $('#app').hidden = false;
   renderAll(); showEmpty();
+  showWhatsNewForExistingUser();
   if (S.backend.volatile) toast('This browser is not saving data, so messages will clear when you close the page.', true);
+}
+function showWhatsNewForExistingUser() {
+  const createdAt = Number(S.me?.createdAt || 0);
+  if (!createdAt || createdAt >= WHATS_NEW_ROLLOUT_AT || S.me?.whatsNewSeenAt) return;
+  const key = 'bc.whats-new.3.4.1.' + S.me.id;
+  if (ls.get(key, false)) return;
+  const style = document.createElement('style');
+  style.textContent = '.whatsnew-backdrop{position:fixed;inset:0;z-index:2147482000;background:#050911c9;backdrop-filter:blur(7px);display:grid;place-items:center;padding:18px;animation:wnFade .18s ease}.whatsnew-card{width:min(540px,100%);max-height:min(760px,calc(100dvh - 36px));overflow:auto;background:var(--panel,#1c2430);border:1px solid color-mix(in srgb,var(--accent,#E9B44C) 48%,var(--line,#394352));border-radius:22px;box-shadow:0 28px 90px #0009;color:var(--text,#f4f5f7);padding:26px;animation:wnRise .22s ease}.whatsnew-head{display:flex;align-items:center;gap:14px;margin-bottom:20px}.whatsnew-mark{width:52px;height:52px;flex:0 0 52px;border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent,#E9B44C) 16%,transparent);color:var(--accent,#E9B44C);font-size:27px}.whatsnew-card h2{margin:0 0 5px;font-size:23px}.whatsnew-card .sub{margin:0;color:var(--muted,#9aa5b3);font-size:13px}.whatsnew-list{display:grid;gap:10px;margin:18px 0 22px}.whatsnew-item{display:flex;gap:12px;padding:12px;border:1px solid var(--line,#394352);border-radius:13px;background:color-mix(in srgb,var(--bg,#101722) 55%,transparent)}.whatsnew-icon{width:30px;flex:0 0 30px;text-align:center;font-size:21px}.whatsnew-item b{display:block;font-size:14px;margin-bottom:3px}.whatsnew-item p{margin:0;color:var(--muted,#aab2bf);font-size:12px;line-height:1.5}.whatsnew-actions{display:flex;justify-content:flex-end}.whatsnew-actions button{min-height:43px;padding:0 20px;border:0;border-radius:11px;background:var(--accent,#E9B44C);color:#17130a;font-weight:750;cursor:pointer}@keyframes wnFade{from{opacity:0}to{opacity:1}}@keyframes wnRise{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.whatsnew-backdrop,.whatsnew-card{animation:none}}';
+  document.head.append(style);
+  const overlay = document.createElement('div');
+  overlay.className = 'whatsnew-backdrop';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'whatsNewTitle');
+  overlay.innerHTML = `<section class="whatsnew-card"><div class="whatsnew-head"><div class="whatsnew-mark">✦</div><div><h2 id="whatsNewTitle">A fresh Crossroads</h2><p class="sub">Here's what's new since your last visit.</p></div></div>
+    <div class="whatsnew-list">
+      <div class="whatsnew-item"><div class="whatsnew-icon">🛡️</div><div><b>More privacy controls</b><p>Choose whether to send read receipts, with privacy enforced by the server.</p></div></div>
+      <div class="whatsnew-item"><div class="whatsnew-icon">🔕</div><div><b>Mute people and set quiet hours</b><p>Silence individual conversations or set a daily notification window.</p></div></div>
+      <div class="whatsnew-item"><div class="whatsnew-icon">📌</div><div><b>Pin your important people</b><p>Pin and unpin friends from the conversation menu to keep them easy to find.</p></div></div>
+      <div class="whatsnew-item"><div class="whatsnew-icon">✨</div><div><b>A smoother interface</b><p>The right-click menu is easier to use, including on smaller screens.</p></div></div>
+    </div><div class="whatsnew-actions"><button type="button" id="whatsNewClose">Sounds good</button></div></section>`;
+  const close = async () => {
+    overlay.remove(); style.remove(); ls.set(key, true);
+    if (S.backend.mode === 'server') {
+      try { await S.backend.markWhatsNewSeen(); S.me.whatsNewSeenAt = Date.now(); }
+      catch (e) { toast('Could not sync the update notice status. It will stay hidden on this device.', true); }
+    }
+  };
+  overlay.querySelector('#whatsNewClose').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function onKey(e) { if (e.key === 'Escape' && overlay.isConnected) { document.removeEventListener('keydown', onKey); close(); } });
+  document.body.append(overlay);
+  overlay.querySelector('#whatsNewClose').focus();
 }
 function showOffline(base, msg) {
   const ob = $('#onboard'); ob.hidden = false; $('#app').hidden = true;
